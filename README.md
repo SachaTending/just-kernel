@@ -7,5 +7,5 @@ Thanks http://www.jamesmolloy.co.uk/tutorial_html/ for "base" and https://wiki.o
 
 In work:
 
-[ ] Fix page fault on initialize_tasking
+[ ]Fix page fault on initialize_tasking
 
