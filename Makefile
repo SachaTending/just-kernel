@@ -8,6 +8,7 @@ ARCH=i386
 FILES = kernel/boot.o kernel/main.o kernel/constructor_test.o \
 	common/tty.o common/string.o common/port_io.o
 
+-include targets/*.mk
 
 build: $(FILES) link
 
