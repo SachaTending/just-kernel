@@ -1,1 +1,1 @@
-FILES += descriptor/gdt.o descriptor/gdt2.o
+FILES += descriptor/gdt.o descriptor/gdt2.o descriptor/descriptor.o descriptor/idt.o descriptor/idt2.o

@@ -7,12 +7,12 @@ gdt_flush:
     lgdt [eax]
 
     mov ax, KERNEL_DATA_SEGMENT
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-    mov ss, ax
+    ;mov ds, ax
+    ;mov es, ax
+    ;mov fs, ax
+    ;mov gs, ax
+    ;mov ss, ax
 
-    jmp CODE_DATA_SEGMENT:flush 
+    ;jmp CODE_DATA_SEGMENT:flush 
 flush:
     ret

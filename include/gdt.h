@@ -1,6 +1,7 @@
 #ifndef _GDT_H
 #define _GDT_H
 #include <stdint.h>
+#include <module.h>
 
 typedef struct gdt_entry
 {
@@ -19,6 +20,7 @@ typedef struct gdt_ptr
 } __attribute__((packed)) gdt_ptr_t;
 
 void gdt_set_entry(int index, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran);
-extern void gdt_flush(uint32_t gdt_ptr);
+extern "C" void gdt_flush(uint32_t gdt_ptr);
+void init_gdt();
 
 #endif

@@ -24,10 +24,9 @@ void gdt_set_entry(int index, uint32_t base, uint32_t limit, uint8_t access, uin
     this2->granularity = this2->granularity | (gran & 0xF0);
 }
 
-MODULE_START_CALL void init_gdt()
+void init_gdt()
 {
-    terminal_writestring("gdt xd\n");
-    terminal_writestring("GDT: Creating table...");
+    terminal_writestring("GDT: Creating table...\n");
     gdt_ptr.limit = sizeof(gdt_entries) - 1;
     gdt_ptr.base = (uint32_t)gdt_entries;
 
@@ -50,8 +49,8 @@ MODULE_START_CALL void init_gdt()
     // User code and data segments, only differ in ring number(ring 3)
     gdt_set_entry(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);
     gdt_set_entry(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);
-    terminal_writestring("GDT: Loading table...");
+    terminal_writestring("GDT: Loading table...\n");
     gdt_flush((uint32_t)(&gdt_ptr));
     // asm volatile("lgdt %0" : : "a" (&gdt_ptr));
-    terminal_writestring("GDT: Done!");
+    terminal_writestring("GDT: Done!\n");
 }

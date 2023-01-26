@@ -41,4 +41,6 @@ static const size_t VGA_HEIGHT = 25;
 
 void terminal_writestring(const char* data);
 
+void terminal_putchar(char c);
+
 #endif

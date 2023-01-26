@@ -7,6 +7,21 @@ size_t terminal_column;
 uint8_t terminal_color;
 uint16_t* terminal_buffer;
 
+#define PAINT(a,b) (((b & 0xF) << 8) | (a & 0xFF))
+
+void scroll() {
+    // Move up
+    void * start = (void*)terminal_buffer + 1 * VGA_WIDTH * 2;
+    uint32_t size = terminal_row * VGA_WIDTH * 2;
+    if(terminal_row < 25)
+        return;
+    memcpy(terminal_buffer, start, size);
+    // Delete
+    start = (void*)terminal_buffer + size;
+    memsetw(start, vga_entry_color(VGA_COLOR_BLACK, VGA_COLOR_BLACK), VGA_WIDTH);
+    terminal_row--;
+}
+
 void terminal_initialize(void) 
 {
 	terminal_row = 0;
@@ -40,6 +55,7 @@ void terminal_putchar(char c)
         terminal_column = 0;
         terminal_row++;
     } else {
+		scroll();
 		terminal_putentryat(c, terminal_color, terminal_column, terminal_row);
 		if (++terminal_column == VGA_WIDTH) {
 			terminal_column = 0;
