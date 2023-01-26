@@ -1,5 +1,3 @@
-#include <math.h>
-
 typedef double f64;
 
 #define E 2.71828
