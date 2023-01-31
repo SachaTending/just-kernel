@@ -5,6 +5,7 @@
 #include <idt.h>
 #include <port_io.h>
 #include <printf2.h>
+#include <multiboot.h>
 
 void log(const char *logd);
 
@@ -46,6 +47,8 @@ bool keyb_received;
 bool keyb_reading;
 int keyb_out;
 
+uint8_t led_stat = 0;
+
 int keyb_read()
 {
 	keyb_reading = true;
@@ -54,6 +57,9 @@ int keyb_read()
 	keyb_received = false;
 	return keyb_out;
 }
+
+
+void kbd_led_handling(uint8_t ledstatus);
 
 void keyb(struct regs *r)
 {
@@ -164,9 +170,14 @@ void mouse(struct regs * r)
             if(mouse_y > 25 - 1)
                 mouse_y = 25 - 1;
 			mouse_cycle = 0;
-			const char cursor_lol = "@";
+            char cursor = "h";
+			const char cursor_lol = "m";
+            void save_buf();
+            void reprint_buf();
+            reprint_buf();
+            save_buf();
 			terminal_putentryat(0, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), old_old_mouse_x, old_old_mouse_y);
-			terminal_putentryat(cursor_lol, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), old_mouse_x, old_mouse_y);
+			terminal_putentryat(cursor, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), old_mouse_x, old_mouse_y);
 			terminal_putentryat(cursor_lol, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), mouse_x, mouse_y);
 			break;
 		
@@ -229,7 +240,7 @@ uint8_t mouse_read()
 
 void install_mouse()
 {
-	uint8_t _status;  //unsigned char
+	uint8_t _status; 
     //Enable the auxiliary mouse device
     mouse_wait(1);
     outportb(0x64, 0xA8);
@@ -253,12 +264,28 @@ void install_mouse()
     mouse_read();  //Acknowledge
 }
 
-extern "C" void kernel_main(void) 
+void kbd_ack(void){
+  while(!(inb(0x60)==0xfa));
+}
+
+
+void kbd_led_handling(uint8_t ledstatus){;
+    outportb(0x60,0xed);
+    kbd_ack();
+    outportb(0x60,ledstatus);
+}
+
+void play_simple_sound(multiboot_info_t *mbi);
+
+#define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
+
+extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
 	/* Initialize terminal interface */
 	terminal_initialize();
 	/* Newline support is left as an exercise. */
 	log("Just kernel ver 1.0 beta\n");
+    if (CHECK_FLAG (mbi->flags, 3))
 	log("kernel location:");printf("0x%x kernel end: 0x%x kernel size: 0x%x (or %d)\n", _kernel_start, _kernel_end, _kernel_end - _kernel_start, _kernel_end - _kernel_start);
 	log("Hello from ");print_russia();terminal_writestring("!\n");
 	log("Note: Sometimes, system triggers excepton, dont worry, and reboot\nbug catched on qemu\n");
@@ -272,6 +299,11 @@ extern "C" void kernel_main(void)
 	log("Testing printf...\n");
 	printf("%d decimal\n", 123);
 	printf("%x hex\n", 0xFFFU);
+    play_simple_sound(mbi);
 	log("Ok, done.\nSystem halted becuase idk what to do\n");
-	for (;;) {asm volatile("hlt");}
+	// for (;;) {asm volatile("hlt");}
+    for (;;)
+    {
+        asm volatile("hlt");
+    }
 }

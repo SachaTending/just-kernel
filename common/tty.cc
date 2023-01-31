@@ -1,6 +1,7 @@
 #include <tty.h>
 #include <port_io.h>
 #include <string.h>
+#include <printf.h>
 
 size_t terminal_row;
 size_t terminal_column;
@@ -34,6 +35,25 @@ void terminal_initialize(void)
 			terminal_buffer[index] = vga_entry(' ', terminal_color);
 		}
 	}
+}
+
+char term_buf;
+
+void save_buf()
+{
+	//memset(terminal_buffer, (char *)term_buf, 80*25);
+	term_buf = terminal_buffer;
+}
+
+void reprint_buf()
+{
+	int old_x = terminal_column;
+	int old_y = terminal_row;
+	terminal_column = 0;
+	terminal_row = 0;
+	printf(term_buf);
+	terminal_column = old_x;
+	terminal_row = old_y;
 }
 
 void terminal_setcolor(uint8_t color) 

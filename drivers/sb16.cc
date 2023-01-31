@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <module.h>
 #include <idt.h>
+#include <multiboot.h>
 
 typedef double f64;
 
@@ -92,8 +93,10 @@ f64 cos(f64 x);
 #define DSP_VOLUME  0x22
 #define DSP_IRQ     0x80
 
-#define SAMPLE_RATE     48000
+#define SAMPLE_RATE     44100
 #define BUFFER_MS       40
+
+#define DSP_HALT_SINGLE_CYCLE_DMA 0x00D0
 
 #define BUFFER_SIZE ((size_t) (SAMPLE_RATE * (BUFFER_MS / 1000.0)))
 
@@ -139,28 +142,90 @@ static void dsp_write(uint8_t b) {
     outportb(DSP_WRITE, b);
 }
 
+static void set_sample_rate(uint16_t hz) {
+    dsp_write(DSP_SET_RATE);
+    dsp_write((uint8_t) ((hz >> 8) & 0xFF));
+    dsp_write((uint8_t) (hz & 0xFF));
+}
 
 static void sb16_irq_handler(struct regs *regs) {
     buffer_flip = !buffer_flip;
     printf("SB16: Interrupt triggered!\n");
+    int i;
+    dsp_write(DSP_HALT_SINGLE_CYCLE_DMA);
     inb(DSP_READ_STATUS);
     inb(DSP_ACK_16);
 }
+
+#include <bruh.h>
+
+typedef struct {
+    char             format[4];      // RIFF
+    unsigned long     f_len;          // filelength
+    char            wave_fmt[8];    // WAVEfmt_
+    unsigned long    fmt_len;    // format lenght
+    unsigned short  fmt_tag;    // format Tag
+    unsigned short  channel;    // Mono/Stereo
+    unsigned long   samples_per_sec;
+    unsigned long   avg_bytes_per_sec;
+    unsigned short  blk_align;
+    unsigned short  bits_per_sample;
+    char            data[4];        // data
+    unsigned long   data_len;    // data size
+} wavehdr_t;
+
 
 MODULE_START_CALL void init_sb16()
 {
     printf("SB16: initializating...\n");
     reset_sb16();
+    wavehdr_t *bruh_info = (wavehdr_t *) bruh;
+    printf("SB16: channels: %d\n", bruh_info->channel);
+    printf("SB16: data len: %d\n", bruh_info->data_len);
+    uint16_t sample_count = (42442 / 2) - 1;
     irq_install_handler(MIXER_IRQ, sb16_irq_handler);
     outportb(DSP_MIXER, DSP_IRQ);
     outportb(DSP_MIXER_DATA, MIXER_IRQ_DATA);
+    set_sample_rate(44100);
     dsp_write(DSP_PLAY | DSP_PROG_16 | DSP_AUTO_INIT);
     dsp_write(DSP_SIGNED | DSP_MONO);
+    dsp_write((uint8_t) ((sample_count >> 0) & 0xFF));
+    dsp_write((uint8_t) ((sample_count >> 8) & 0xFF));
     dsp_write(DSP_ON);
     dsp_write(DSP_ON_16);
+    //transfer(bruh_info->data, bruh_info->data_len - bruh_info->data_len%80);
 }
 
-static void reset_sb16() {
+void play_simple_sound(multiboot_info_t *mbi)
+{
+    multiboot_module_t *mod;
+    int i;
+      
+    printf ("mods_count = %d, mods_addr = 0x%x\n",
+            (int) mbi->mods_count, (int) mbi->mods_addr);
+    for (i = 0, mod = (multiboot_module_t *) mbi->mods_addr;
+       i < mbi->mods_count;
+           i++, mod++) {
+            wavehdr_t *data_info = (wavehdr_t *) mod->mod_start;
+            printf("SB16: channels: %d\n", data_info->channel);
+            printf("SB16: data len: %d\n", data_info->data_len);
+            printf("0x%x 0x%x 0x%x %d", mod->mod_start, mod->mod_end, mod->mod_end - mod->mod_start, mod->mod_end - mod->mod_start);
+            reset_sb16();
+            outportb(DSP_MIXER, DSP_IRQ);
+            outportb(DSP_MIXER_DATA, MIXER_IRQ_DATA);
+            set_sample_rate(48000);
+            uint16_t sample_count = (data_info->data_len / 2) - 1;
+            dsp_write(DSP_PLAY | DSP_PROG_16 | DSP_AUTO_INIT);
+            dsp_write(DSP_SIGNED | DSP_STEREO);
+            dsp_write((uint8_t) ((sample_count >> 0) & 0xFF));
+            dsp_write((uint8_t) ((sample_count >> 8) & 0xFF));
+            dsp_write(DSP_ON);
+            dsp_write(DSP_ON_16);
+            transfer(mod->mod_start, 15151352456*mod->mod_start);
+        }
+}
+
+void reset_sb16() {
     uint8_t status;
     uint8_t major;
     uint8_t minor;

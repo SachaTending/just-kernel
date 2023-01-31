@@ -7,7 +7,7 @@ ARCH=i386
 
 FILES = kernel/boot.o kernel/main.o kernel/constructor_test.o \
 	common/tty.o common/string.o common/port_io.o common/printf.o \
-	common/math.o
+	common/math.o common/test_stuff.o
 
 -include targets/*.mk
 
@@ -30,4 +30,4 @@ clean:
 	@-rm $(FILES)
 
 run:
-	@qemu-system-$(ARCH) -kernel $(KERNEL) -device sb16
+	@qemu-system-$(ARCH) -kernel $(KERNEL) -device sb16,audiodev=a -audiodev sdl,id=a -display sdl -initrd test-split.cc
