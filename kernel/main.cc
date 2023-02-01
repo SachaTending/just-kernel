@@ -116,7 +116,7 @@ int old_mouse_y;
 int old_old_mouse_x;
 int old_old_mouse_y;
 
-void terminal_putentryat(char c, uint8_t color, size_t x, size_t y);
+void terminal_putentryat2(const char c, uint8_t color, size_t x, size_t y);
 
 void mouse(struct regs * r)
 {
@@ -176,9 +176,9 @@ void mouse(struct regs * r)
             void reprint_buf();
             reprint_buf();
             save_buf();
-			terminal_putentryat(0, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), old_old_mouse_x, old_old_mouse_y);
-			terminal_putentryat(cursor, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), old_mouse_x, old_mouse_y);
-			terminal_putentryat(cursor_lol, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), mouse_x, mouse_y);
+			terminal_putentryat2(0, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), old_old_mouse_x, old_old_mouse_y);
+			terminal_putentryat2(cursor, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), old_mouse_x, old_mouse_y);
+			terminal_putentryat2(cursor_lol, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), mouse_x, mouse_y);
 			break;
 		
 	}
@@ -281,12 +281,10 @@ void play_simple_sound(multiboot_info_t *mbi);
 
 extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
-	/* Initialize terminal interface */
 	terminal_initialize();
-	/* Newline support is left as an exercise. */
 	log("Just kernel ver 1.0 beta\n");
     if (CHECK_FLAG (mbi->flags, 3))
-	log("kernel location:");printf("0x%x kernel end: 0x%x kernel size: 0x%x (or %d)\n", _kernel_start, _kernel_end, _kernel_end - _kernel_start, _kernel_end - _kernel_start);
+	log("kernel location:");printf("0x%x kernel end: 0x%x kernel size: 0x%x (or %d)\n", (unsigned)&_kernel_start, (unsigned)&_kernel_end, (unsigned)&_kernel_end - (unsigned)&_kernel_start, (unsigned)&_kernel_end - (unsigned)&_kernel_start);
 	log("Hello from ");print_russia();terminal_writestring("!\n");
 	log("Note: Sometimes, system triggers excepton, dont worry, and reboot\nbug catched on qemu\n");
 	// terminal_writestring("Builded on host: ");terminal_writestring(_HOST_USER);terminal_writestring("@");terminal_writestring(_HOST_NAME);terminal_writestring("\n");
@@ -298,7 +296,7 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
 	asm volatile("hlt");
 	log("Testing printf...\n");
 	printf("%d decimal\n", 123);
-	printf("%x hex\n", 0xFFFU);
+	printf("%x hex\n", 0xABC);
     play_simple_sound(mbi);
 	log("Ok, done.\nSystem halted becuase idk what to do\n");
 	// for (;;) {asm volatile("hlt");}

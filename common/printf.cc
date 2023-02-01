@@ -52,7 +52,7 @@ void vsprintf_helper(char * str, void (*putchar)(char), const char * format, uin
                 case 'd':
                 //case 'u':
                 //case 'x':
-                //case 'p':
+                case 'p':
                     if(c == 'd' || c == 'u')
                         sys = 10;
                     else
@@ -161,6 +161,7 @@ void vsprintf_helper(char * str, void (*putchar)(char), const char * format, uin
                         }
                     }
                     break;
+                
                 default:
                     break;
             }

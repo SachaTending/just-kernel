@@ -30,4 +30,4 @@ clean:
 	@-rm $(FILES)
 
 run:
-	@qemu-system-$(ARCH) -kernel $(KERNEL) -device sb16,audiodev=a -audiodev sdl,id=a -display sdl -initrd test-split.cc
+	@qemu-system-$(ARCH) -kernel $(KERNEL) -device sb16,audiodev=a -audiodev sdl,id=a -display sdl -initrd phonk"("DO_NOT_TOUCH_FOR_TESTING")".wav
