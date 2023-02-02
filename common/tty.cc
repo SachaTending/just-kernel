@@ -14,7 +14,7 @@ void scroll() {
     // Move up
     void * start = (void*)terminal_buffer + 1 * VGA_WIDTH * 2;
     uint32_t size = terminal_row * VGA_WIDTH * 2;
-    if(terminal_row < 25)
+    if(terminal_row < 50)
         return;
     memcpy(terminal_buffer, start, size);
     // Delete

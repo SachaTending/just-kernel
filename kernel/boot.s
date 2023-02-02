@@ -88,3 +88,9 @@ _start:
 .hang:	hlt
 	jmp .hang
 .end:
+
+global trigger_gp
+
+trigger_gp:
+	int 0x80
+	ret

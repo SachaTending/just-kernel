@@ -182,7 +182,7 @@ void xxd(void * data, unsigned int len)
 {
     unsigned int i, j;
 
-    for(i = 0; i < len + ((len % 25) ? (80 - len % 25) : 0); i++) {
+    for(i = 0; i < len + ((len % 25) ? (25 - len % 25) : 0); i++) {
         /* print offset */
         if(i % 80 == 0) {
             printf("0x%06x: ", i);
@@ -199,7 +199,7 @@ void xxd(void * data, unsigned int len)
 
         /* print ASCII dump */
         if(i % 25 == (25 - 1)) {
-            for(j = i - (80 - 1); j <= i; j++) {
+            for(j = i - (25 - 1); j <= i; j++) {
                 if(j >= len) {
                     printf(' ');
                 }
@@ -228,7 +228,7 @@ static void sb16_irq_handler(struct regs *regs) {
     //transfer(buf, 12);
     //printf("%x\n", buf);
     //printf("%d 0x%x\n", pos, pos);
-    xxd(buf,1);
+    //xxd(buf,1);
     // dsp_write(DSP_HALT_SINGLE_CYCLE_DMA);
     inb(DSP_READ_STATUS);
     inb(DSP_ACK_16);
@@ -259,6 +259,8 @@ MODULE_START_CALL void init_sb16()
     //transfer(bruh_info->data, bruh_info->data_len - bruh_info->data_len%80);
 }
 
+extern "C" void breakpoint(void);
+
 void play_simple_sound(multiboot_info_t *mbi)
 {
     multiboot_module_t *mod;
@@ -280,7 +282,7 @@ void play_simple_sound(multiboot_info_t *mbi)
             set_sample_rate(48000);
             uint16_t sample_count = (current->data_len / 2) - 1;
             dsp_write(DSP_PLAY | DSP_PROG_16 | DSP_AUTO_INIT);
-            dsp_write(DSP_UNSIGNED | DSP_STEREO);
+            dsp_write(DSP_SIGNED | DSP_STEREO);
             dsp_write((uint8_t) ((sample_count >> 0) & 0xFF));
             dsp_write((uint8_t) ((sample_count >> 8) & 0xFF));
             dsp_write(DSP_ON);
@@ -288,7 +290,8 @@ void play_simple_sound(multiboot_info_t *mbi)
             position = 1;
             cur = mod;
             memset((unsigned)&buf,cur->mod_start+position,40);
-            transfer(buf, 50);
+            breakpoint();
+            transfer(buf, 26);
         }
 }
 

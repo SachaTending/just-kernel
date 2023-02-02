@@ -14,3 +14,8 @@ vga_set_mode:
     iret
     int 0x13
     ret
+
+global breakpoint
+breakpoint:
+    int 03h
+    ret

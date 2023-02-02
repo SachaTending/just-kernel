@@ -6,6 +6,7 @@
 MODULE_START_CALL void descriptor_init()
 {
     terminal_writestring("Descriptor: Initializating...\n");
-    // init_gdt();
     init_idt();
+    init_gdt();
+    //init_idt();
 }

@@ -1,1 +1,1 @@
-FILES += drivers/sb16.o drivers/vga2.o
+FILES += drivers/sb16.o drivers/vga2.o drivers/vga.o

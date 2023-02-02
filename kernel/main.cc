@@ -5,7 +5,9 @@
 #include <idt.h>
 #include <port_io.h>
 #include <printf2.h>
+#include <string.h>
 #include <multiboot.h>
+#include <vga.h>
 
 void log(const char *logd);
 
@@ -40,6 +42,8 @@ void print_russia() // made in russia xd
 	printf("ia");
 	terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK)); // Restore colors
 }
+
+
 
 int i = 0;
 
@@ -279,8 +283,61 @@ void play_simple_sound(multiboot_info_t *mbi);
 
 #define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
 
+extern "C" void trigger_gp(void);
+
+static void fillrect(unsigned char *vram, unsigned char r, unsigned char g, unsigned   char b, unsigned char w, unsigned char h) {
+    unsigned char *where = vram;
+    int i, j;
+ 
+    for (i = 0; i < w; i++) {
+        for (j = 0; j < h; j++) {
+            g_write_pixel(j, i, r);
+        }
+    }
+}
+
+typedef char font_char;
+
+font_char* font_data[26];
+ 
+// rendering one of the character, given its font_data
+void draw_char(font_char* a);
+ 
+void draw_string(char* input) {
+    while(*input) {
+        draw_char(font_data[input]);
+        input++;
+    }
+}
+ 
+void draw_char(font_char* a) {
+    int l;
+    int i;
+    int h;
+    int j;
+    int c;
+    int c1;
+    int x;
+    for (l = 0; l < 8; l++) {
+        for (i = 8; i > 0; i--) {
+            j++;
+            if ((a[l] & (1 << i))) {
+                c = c1;
+                g_write_pixel(j, h, c);
+            }
+        }
+        h++;
+        j = x;
+    }
+}
+
 extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
+    //write_regs(g_80x50_text);
+    write_font(g_8x16_font, 16);
+    font512();
+    //sset_text_mode(1);
+    write_font(g_8x8_font, 8);
 	terminal_initialize();
 	log("Just kernel ver 1.0 beta\n");
     if (CHECK_FLAG (mbi->flags, 3))
@@ -297,8 +354,34 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
 	log("Testing printf...\n");
 	printf("%d decimal\n", 123);
 	printf("%x hex\n", 0xABC);
-    play_simple_sound(mbi);
-	log("Ok, done.\nSystem halted becuase idk what to do\n");
+    write_regs(g_320x200x256_modex);
+    uint32_t * frmabebuffer=get_fb_seg();
+    write_regs(g_80x50_text);
+    printf("Frmabebuffer at 0x%x\n", frmabebuffer);
+    printf("We going to graphics!\n");
+    int i2;
+    while (i2<10000000) {i2++;}
+    write_regs(g_320x200x256_modex);
+    memset(0xA0000, 0, 320*200);
+    i2 = 0;
+    int offest2;
+    /*
+    while (i2<256)
+    {
+        i2++;
+        offest2 = offest2 + 100;
+        memset(0xA0000+offest2, i2, 100);
+    }
+    */
+    draw_string("hello");
+    //fillrect(0xA0000, 5, 4, 4, 4 ,4);
+    //memset(0xA0000, 0, 320*200);
+    //write_regs(g_320x200x256_modex);
+	//g_write_pixel = write_pixel8x;
+	//draw_x();
+    //play_simple_sound(mbi);
+    log("Ok, done.\nSystem halted becuase idk what to do\n");
+    //trigger_gp();
 	// for (;;) {asm volatile("hlt");}
     for (;;)
     {

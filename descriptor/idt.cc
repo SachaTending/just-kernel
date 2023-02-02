@@ -3,6 +3,7 @@
 #include <tty.h>
 #include <port_io.h>
 #include <string.h>
+#include <printf.h>
 
 struct idt_entry idt[256];
 struct idt_ptr idtp;
@@ -234,7 +235,20 @@ extern "C" void fault_handler(struct regs *r)
     if (r->int_no < 32)
     {
         terminal_writestring(exception_messages[r->int_no]);
-        terminal_writestring(" Exception. System Halted!\n");
+        terminal_writestring(" Exception.\n");
+        if (r->int_no==3)
+        {
+            //printf("амогус\n");
+            return;
+        }
+        if (r->int_no==13)
+        {
+            printf("Caused by instrcuction at 0x%x\n", r->eip);
+            //r->eip = 0;
+            printf("0x%x\n", (char *)r->eip);
+            return;
+        }
+        printf("System Halted!\n");
         __asm__ volatile("cli");
         for (;;);
     }
@@ -246,7 +260,7 @@ void init_idt()
     idtp.limit = (sizeof (struct idt_entry) * 256) - 1;
     idtp.base = (uint32_t) &idt;
     memset(&idt, 0, sizeof(struct idt_entry) * 256);
-    idt_load();
     isrs_install();
     irq_install();
+    idt_load();
 }

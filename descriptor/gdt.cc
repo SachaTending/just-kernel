@@ -41,16 +41,16 @@ void init_gdt()
         1   code segment is readable
         0   access bit, always 0, cpu set this to 1 when accessing this sector
     */
-    gdt_set_entry(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);
+    //gdt_set_entry(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);
     /* Kernel data, access(92 = 1 00 1 0 0 1 0)
         Only differ at the fifth bit(counting from least insignificant bit), 0 means it's a data segment.
     */
-    gdt_set_entry(2, 0, 0xFFFFFFFF, 0x92, 0xCF);
+    //gdt_set_entry(2, 0, 0xFFFFFFFF, 0x92, 0xCF);
     // User code and data segments, only differ in ring number(ring 3)
-    gdt_set_entry(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);
-    gdt_set_entry(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);
+    //gdt_set_entry(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);
+    //gdt_set_entry(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);
     terminal_writestring("GDT: Loading table...\n");
-    gdt_flush((uint32_t)(&gdt_ptr));
+    //gdt_flush((uint32_t)(&gdt_ptr));
     // asm volatile("lgdt %0" : : "a" (&gdt_ptr));
     terminal_writestring("GDT: Done!\n");
 }
