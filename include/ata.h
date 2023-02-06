@@ -82,5 +82,8 @@
 #define      ATA_READ      0x00
 #define      ATA_WRITE     0x013
 
+typedef struct {
+	uint8_t drive;
+} ide_private_data;
 
 #endif

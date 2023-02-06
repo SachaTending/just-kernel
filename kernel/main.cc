@@ -11,6 +11,8 @@
 
 void log(const char *logd);
 
+void ata_is_sus();
+
 typedef void (*constructor)();
 extern constructor start_ctors;
 extern constructor end_ctors;
@@ -212,12 +214,25 @@ void rtc_call(struct regs *r)
     inb(0x71);		// just throw away contents
 }
 
+void ide_primary_irq(struct regs *r)
+{
+	printf("ATA: ide primary irq triggered\n");
+}
+
+void ide_secondary_irq(struct regs *r)
+{
+	printf("ATA: ide second irq triggered\n");
+}
+
+
 void install_ints()
 {
 	irq_install_handler(0, timer_call);
 	irq_install_handler(1, keyb);
     irq_install_handler(8, rtc_call);
 	irq_install_handler(12, mouse);
+    irq_install_handler(15, ide_secondary_irq);
+    irq_install_handler(14, ide_primary_irq);
 }
 
 void mouse_wait(uint8_t a_type) {
@@ -367,6 +382,7 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
 	//draw_x();
     //play_simple_sound(mbi);
     log("System halted becuase idk what to do\n");
+    ata_is_sus();
     //trigger_gp();
 	// for (;;) {asm volatile("hlt");}
     for (;;)
