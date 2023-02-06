@@ -1,84 +1,156 @@
 #include <port_io.h>
-#include <printf.h>
+#include <printf2.h> // vs code used /usr/include/printf.h, so using cloned file
 #include <stddef.h>
 #include <idt.h>
+#include <module.h>
 
-#define DSP_RESET 0x226
-#define DSP_READ 0x22A
-#define DSP_WRITE 0x22C
-#define DSP_READ_STATUS 0x22E
-#define DSP_INT_ACK 0x22F
+#define cpuid(in, a, b, c, d) __asm__("cpuid": "=a" (a), "=b" (b), "=c" (c), "=d" (d) : "a" (in));
 
-#define REG_ADDR 0x224
-#define REG_DATA 0x225
-
-#define DIRECT_DAC 0x10
-#define ENABLE_SPEAKER 0xD1
-
-#define MIXER_WRITE 0x224
-#define MIXER_DATA 0x225
-
-
-
-#define outb(data, port) outportb(port, data);
-
-void dsp_reset2(){
-    int i;
-    uint8_t status = 0;
-    uint32_t buf[4];
-    *buf = 128;
-      //rtc_write(0, buf, 4);
-
-    outb(1, DSP_RESET);
-    for (size_t i = 0; i < 1000000; i++);
-    outb(0, DSP_RESET);
-    status = inb(DSP_READ_STATUS);
-    if (~status & 128) {
-        printf("sb16 init fail\n");
-    }
-
-    if(inb(DSP_READ) != 0xAA){
-        printf("Could not init sb16\n");
-    }
-
-    return;
+void printregs(int eax, int ebx, int ecx, int edx) {
+	int j;
+	char string[17];
+	string[16] = '\0';
+	for(j = 0; j < 4; j++) {
+		string[j] = eax >> (8 * j);
+		string[j + 4] = ebx >> (8 * j);
+		string[j + 8] = ecx >> (8 * j);
+		string[j + 12] = edx >> (8 * j);
+	}
+	printf("%s", string);
 }
 
-void interrupt_sb16(struct regs *r)
+void get_regs(int eax, int ebx, int ecx, int edx, char string[17]) {
+	int j;
+	//char string[17];
+	string[16] = '\0';
+	for(j = 0; j < 4; j++) {
+		string[j] = eax >> (8 * j);
+		string[j + 4] = ebx >> (8 * j);
+		string[j + 8] = ecx >> (8 * j);
+		string[j + 12] = edx >> (8 * j);
+	}
+}
+
+unsigned char second;
+unsigned char minute;
+unsigned char hour;
+unsigned char day;
+unsigned char month;
+unsigned int year;
+
+
+void read_rtc();
+
+MODULE_START_CALL void test_it()
 {
-    printf("sb16: interrupt fired\n");
+    int eax,ebx,ecx,edx;
+    cpuid(0x80000002, eax, ebx, ecx, edx);
+    char data[17];
+    get_regs(eax, ebx, ecx, edx, data);
+    printf("%s\n", data);
+    read_rtc();
+    printf("%d:%d:%d %d.%d.%d\n", hour, minute, second, day, month, year);
 }
 
-void reset_sb16();
+#define CURRENT_YEAR        2023                            // Change this each year!
+ 
+int century_register = 0x00;                                // Set by ACPI table parsing code if possible
+ 
 
-void play_simple_sound2(){
-    return;
-    dsp_reset2();
-    while(inb(DSP_WRITE));
-    printf("Enabling speaker\n");
-    outb(0xD1, DSP_WRITE);
+#define out_byte outportb
+#define in_byte inb
 
-    while(inb(DSP_WRITE));
-    outportb(MIXER_WRITE, 0x80);
-    outportb(MIXER_DATA, 0x02);
-    irq_install_handler(5, interrupt_sb16);
-    outportb(0x0A, 5);
-    outportb(0x0C, 1);
-    /*
-    printf("Playing sound\n");
-    outb(0xF0, DSP_WRITE);
-
-      while(1){
-            while(inb(DSP_WRITE));
-            outb(0x10, DSP_WRITE);
-            outb(0x00, DSP_WRITE);
-            //rtc_read(0, 0, NULL, 0);
-            while(inb(DSP_WRITE));
-            outb(0x10, DSP_WRITE);
-            outb(0xFF, DSP_WRITE);
-            //rtc_read(0, 0, NULL, 0);
+enum {
+      cmos_address = 0x70,
+      cmos_data    = 0x71
+};
+ 
+int get_update_in_progress_flag() {
+      out_byte(cmos_address, 0x0A);
+      return (in_byte(cmos_data) & 0x80);
+}
+ 
+unsigned char get_RTC_register(int reg) {
+      out_byte(cmos_address, reg);
+      return in_byte(cmos_data);
+}
+ 
+void read_rtc() {
+      unsigned char century;
+      unsigned char last_second;
+      unsigned char last_minute;
+      unsigned char last_hour;
+      unsigned char last_day;
+      unsigned char last_month;
+      unsigned char last_year;
+      unsigned char last_century;
+      unsigned char registerB;
+ 
+      // Note: This uses the "read registers until you get the same values twice in a row" technique
+      //       to avoid getting dodgy/inconsistent values due to RTC updates
+ 
+      while (get_update_in_progress_flag());                // Make sure an update isn't in progress
+      second = get_RTC_register(0x00);
+      minute = get_RTC_register(0x02);
+      hour = get_RTC_register(0x04);
+      day = get_RTC_register(0x07);
+      month = get_RTC_register(0x08);
+      year = get_RTC_register(0x09);
+      if(century_register != 0) {
+            century = get_RTC_register(century_register);
       }
-
-      return;
-    */
+ 
+      do {
+            last_second = second;
+            last_minute = minute;
+            last_hour = hour;
+            last_day = day;
+            last_month = month;
+            last_year = year;
+            last_century = century;
+ 
+            while (get_update_in_progress_flag());           // Make sure an update isn't in progress
+            second = get_RTC_register(0x00);
+            minute = get_RTC_register(0x02);
+            hour = get_RTC_register(0x04);
+            day = get_RTC_register(0x07);
+            month = get_RTC_register(0x08);
+            year = get_RTC_register(0x09);
+            if(century_register != 0) {
+                  century = get_RTC_register(century_register);
+            }
+      } while( (last_second != second) || (last_minute != minute) || (last_hour != hour) ||
+               (last_day != day) || (last_month != month) || (last_year != year) ||
+               (last_century != century) );
+ 
+      registerB = get_RTC_register(0x0B);
+ 
+      // Convert BCD to binary values if necessary
+ 
+      if (!(registerB & 0x04)) {
+            second = (second & 0x0F) + ((second / 16) * 10);
+            minute = (minute & 0x0F) + ((minute / 16) * 10);
+            hour = ( (hour & 0x0F) + (((hour & 0x70) / 16) * 10) ) | (hour & 0x80);
+            day = (day & 0x0F) + ((day / 16) * 10);
+            month = (month & 0x0F) + ((month / 16) * 10);
+            year = (year & 0x0F) + ((year / 16) * 10);
+            if(century_register != 0) {
+                  century = (century & 0x0F) + ((century / 16) * 10);
+            }
+      }
+ 
+      // Convert 12 hour clock to 24 hour clock if necessary
+ 
+      if (!(registerB & 0x02) && (hour & 0x80)) {
+            hour = ((hour & 0x7F) + 12) % 24;
+      }
+ 
+      // Calculate the full (4-digit) year
+ 
+      if(century_register != 0) {
+            year += century * 100;
+      } else {
+            year += (CURRENT_YEAR / 100) * 100;
+            if(year < CURRENT_YEAR) year += 100;
+      }
 }

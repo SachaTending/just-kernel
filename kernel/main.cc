@@ -190,7 +190,14 @@ void mouse(struct regs * r)
 
 void timer_call(struct regs *r)
 {
-	i++;
+	//i++;
+}
+
+static inline uint64_t rdtsc()
+{
+    uint64_t ret;
+    asm volatile ( "rdtsc" : "=A"(ret) );
+    return ret;
 }
 
 void log(const char *logd)
@@ -198,10 +205,18 @@ void log(const char *logd)
 	printf("[%d]%s", i, logd);
 }
 
+void rtc_call(struct regs *r)
+{
+    i++;
+    outportb(0x70, 0x0C);	// select register C
+    inb(0x71);		// just throw away contents
+}
+
 void install_ints()
 {
 	irq_install_handler(0, timer_call);
 	irq_install_handler(1, keyb);
+    irq_install_handler(8, rtc_call);
 	irq_install_handler(12, mouse);
 }
 
@@ -296,41 +311,8 @@ static void fillrect(unsigned char *vram, unsigned char r, unsigned char g, unsi
     }
 }
 
-typedef char font_char;
-
-font_char* font_data[26];
  
 // rendering one of the character, given its font_data
-void draw_char(font_char* a);
- 
-void draw_string(char* input) {
-    while(*input) {
-        draw_char(font_data[input]);
-        input++;
-    }
-}
- 
-void draw_char(font_char* a) {
-    int l;
-    int i;
-    int h;
-    int j;
-    int c;
-    int c1;
-    int x;
-    for (l = 0; l < 8; l++) {
-        for (i = 8; i > 0; i--) {
-            j++;
-            if ((a[l] & (1 << i))) {
-                c = c1;
-                g_write_pixel(j, h, c);
-            }
-        }
-        h++;
-        j = x;
-    }
-}
-
 extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
     //write_regs(g_80x50_text);
@@ -345,11 +327,15 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
 	log("Hello from ");print_russia();terminal_writestring("!\n");
 	log("Note: Sometimes, system triggers excepton, dont worry, and reboot\nbug catched on qemu\n");
 	// terminal_writestring("Builded on host: ");terminal_writestring(_HOST_USER);terminal_writestring("@");terminal_writestring(_HOST_NAME);terminal_writestring("\n");
-	log("Calling constructros...\n");
+    log("Calling constructros...\n");
 	callConstructors();
 	log("Installing interrupts...\n");
 	install_mouse();
 	install_ints();
+    outportb(0x70, 0x8B);		// select register B, and disable NMI
+    char prev=inb(0x71);	// read the current value of register B
+    outportb(0x70, 0x8B);		// set the index again (a read will reset the index to register D)
+    outportb(0x71, prev | 0x40);	// write the previous value ORed with 0x40. This turns on bit 6 of register B
 	asm volatile("hlt");
 	log("Testing printf...\n");
 	printf("%d decimal\n", 123);
@@ -358,10 +344,10 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
     uint32_t * frmabebuffer=get_fb_seg();
     write_regs(g_80x50_text);
     printf("Frmabebuffer at 0x%x\n", frmabebuffer);
-    printf("We going to graphics!\n");
+    //printf("We going to graphics!\n");
     int i2;
     while (i2<10000000) {i2++;}
-    write_regs(g_320x200x256_modex);
+    //write_regs(g_320x200x256_modex);
     memset(0xA0000, 0, 320*200);
     i2 = 0;
     int offest2;
@@ -373,14 +359,14 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
         memset(0xA0000+offest2, i2, 100);
     }
     */
-    draw_string("hello");
+    
     //fillrect(0xA0000, 5, 4, 4, 4 ,4);
     //memset(0xA0000, 0, 320*200);
     //write_regs(g_320x200x256_modex);
 	//g_write_pixel = write_pixel8x;
 	//draw_x();
     //play_simple_sound(mbi);
-    log("Ok, done.\nSystem halted becuase idk what to do\n");
+    log("System halted becuase idk what to do\n");
     //trigger_gp();
 	// for (;;) {asm volatile("hlt");}
     for (;;)

@@ -25,8 +25,8 @@ void scroll() {
 
 void terminal_initialize(void) 
 {
-	terminal_row = 0;
-	terminal_column = 0;
+	//terminal_row = 0;
+	//terminal_column = 0;
 	terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
 	terminal_buffer = (uint16_t*) 0xB8000;
 	for (size_t y = 0; y < VGA_HEIGHT; y++) {
@@ -60,6 +60,7 @@ void terminal_setcolor(uint8_t color)
 {
 	terminal_color = color;
 }
+
 
 void terminal_putentryat2(const char c, uint8_t color, size_t x, size_t y) 
 {
