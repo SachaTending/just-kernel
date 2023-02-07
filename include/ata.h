@@ -2,6 +2,7 @@
 #define _ATA_H_
 
 #include <stdint.h>
+#include <device.h>
 
 #define ATA_SR_BSY     0x80
 #define ATA_SR_DRDY    0x40
@@ -85,5 +86,7 @@
 typedef struct {
 	uint8_t drive;
 } ide_private_data;
+
+void ata_read(void *buf, uint32_t lba, uint32_t numsects, device_t *dev);
 
 #endif

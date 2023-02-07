@@ -1,5 +1,5 @@
 CFLAGS = -I include -m32 -march=i386 -c -I include -fpermissive -g
-LDFLAGS = -A i386 -melf_i386 -T link.ld
+LDFLAGS = -A i386 -melf_i386 -T link.ld -Map=kernmap.map
 AS=NASM
 ASFLAGS=-felf32
 KERNEL=kernel.bin
@@ -15,7 +15,7 @@ build: $(FILES) link
 
 .cc.o:
 	@echo C++ $@
-	@gcc $(CFLAGS) -o $@ $<
+	@g++ $(CFLAGS) -o $@ $<
 
 .s.o:
 	@echo NASM $@
@@ -25,9 +25,10 @@ build: $(FILES) link
 link: $(FILES)
 	@echo LD $(KERNEL)
 	@$(LD) $(LDFLAGS) -o $(KERNEL) $(FILES)
+	@cat kernmap.map | egrep '*0x00000000.*' | egrep -v '\.' | tr -s ' ' | sed -e 's/0x00000000//' > kernmap.small
 
 clean:
 	@-rm $(FILES)
 
 run:
-	@qemu-system-$(ARCH) -hda test-split.cc -kernel $(KERNEL) -rtc base=localtime -device sb16,audiodev=a -audiodev sdl,id=a -display sdl -initrd phonk"("DO_NOT_TOUCH_FOR_TESTING")".wav
+	@qemu-system-$(ARCH) -hda ext2.img -kernel $(KERNEL) -rtc base=localtime -device sb16,audiodev=a -audiodev sdl,id=a -display sdl -initrd phonk"("DO_NOT_TOUCH_FOR_TESTING")".wav

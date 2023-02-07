@@ -216,12 +216,12 @@ void rtc_call(struct regs *r)
 
 void ide_primary_irq(struct regs *r)
 {
-	printf("ATA: ide primary irq triggered\n");
+	//printf("ATA: ide primary irq triggered\n");
 }
 
 void ide_secondary_irq(struct regs *r)
 {
-	printf("ATA: ide second irq triggered\n");
+	//printf("ATA: ide second irq triggered\n");
 }
 
 

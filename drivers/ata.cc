@@ -101,8 +101,9 @@ retry2:	status = inportb(io + ATA_REG_STATUS);
 }
 
 #define mprint printf
+#define kprintf printf
 
-uint8_t ata_read_one(uint8_t *buf, uint32_t lba, device_t *dev)
+uint8_t ata_read_one(void *buf, uint32_t lba, device_t *dev)
 {
 	//lba &= 0x00FFFFFF; // ignore topmost byte
 	/* We only support 28bit LBA so far */
@@ -130,15 +131,15 @@ uint8_t ata_read_one(uint8_t *buf, uint32_t lba, device_t *dev)
 			printf("ATA: FATAL: unknown drive!\n");
 			return 0;
 	}
-	//kprintf("io=0x%x %s\n", io, drive==ATA_MASTER?"Master":"Slave");
+	//printf("io=0x%x %s\n", io, drive==ATA_MASTER?"Master":"Slave");
 	uint8_t cmd = (drive==ATA_MASTER?0xE0:0xF0);
 	uint8_t slavebit = (drive == ATA_MASTER?0x00:0x01);
 	/*kprintf("LBA = 0x%x\n", lba);
 	kprintf("LBA>>24 & 0x0f = %d\n", (lba >> 24)&0x0f);
 	kprintf("(uint8_t)lba = %d\n", (uint8_t)lba);
 	kprintf("(uint8_t)(lba >> 8) = %d\n", (uint8_t)(lba >> 8));
-	kprintf("(uint8_t)(lba >> 16) = %d\n", (uint8_t)(lba >> 16));*/
-	//outportb(io + ATA_REG_HDDEVSEL, cmd | ((lba >> 24)&0x0f));
+	kprintf("(uint8_t)(lba >> 16) = %d\n", (uint8_t)(lba >> 16));
+	outportb(io + ATA_REG_HDDEVSEL, cmd | ((lba >> 24)&0x0f));*/
 	outportb(io + ATA_REG_HDDEVSEL, (cmd | (uint8_t)((lba >> 24 & 0x0F))));
 	//mprint("issued 0x%x to 0x%x\n", (cmd | (lba >> 24)&0x0f), io + ATA_REG_HDDEVSEL);
 	//for(int k = 0; k < 10000; k++) ;
@@ -171,14 +172,17 @@ uint8_t ata_read_one(uint8_t *buf, uint32_t lba, device_t *dev)
 	return 1;
 }
 
-void ata_read(uint8_t *buf, uint32_t lba, uint32_t numsects, device_t *dev)
+void ata_read(void *buf, uint32_t lba, uint32_t numsects, device_t *dev)
 {
+	printf("ATA: reading to 0x%x lba %d numsects %d\n", (unsigned)&buf, lba, numsects);
 	for(int i = 0; i < numsects; i++)
 	{
 		ata_read_one(buf, lba + i, dev);
 		// buf += 512;
 	}
 }
+
+void ext2_scan_dev(device_t *dev);
 
 void ata_is_sus()
 {
@@ -199,8 +203,8 @@ void ata_is_sus()
 	priv->drive = (ATA_PRIMARY << 1) | ATA_MASTER;
 	dev->priv = priv;
 	dev->read = ata_read;
-	char buf;
-	printf("ATA: bus 0 drive 0 name %s\n", dev->name);
-	ata_read(buf, 0, 1, dev);
-	printf(buf);
+	char buf[2500];
+	printf("ATA: bus 0 drive 0 name %s max lba %d sectors %d\n", dev->name, ide_buf[ATA_IDENT_MAX_LBA]-1, ide_buf[ATA_IDENT_SECTORS]);
+	ext2_scan_dev(dev);
+	printf("ATA: ext2_scan_dev(dev) done");
 }
