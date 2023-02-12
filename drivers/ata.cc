@@ -203,8 +203,7 @@ void ata_is_sus()
 	priv->drive = (ATA_PRIMARY << 1) | ATA_MASTER;
 	dev->priv = priv;
 	dev->read = ata_read;
-	char buf[2500];
-	printf("ATA: bus 0 drive 0 name %s max lba %d sectors %d\n", dev->name, ide_buf[ATA_IDENT_MAX_LBA]-1, ide_buf[ATA_IDENT_SECTORS]);
+	printf("ATA: bus 0 drive 0 name %s\n", dev->name);
 	ext2_scan_dev(dev);
 	printf("ATA: ext2_scan_dev(dev) done");
 }

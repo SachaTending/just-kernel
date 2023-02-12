@@ -1,6 +1,6 @@
 #include <tty.h>
 #include <port_io.h>
-#include <string.h>
+#include "string.h"
 #include <printf.h>
 
 size_t terminal_row;
@@ -37,12 +37,12 @@ void terminal_initialize(void)
 	}
 }
 
-char term_buf;
+uint16_t* term_buf;
 
 void save_buf()
 {
 	//memset(terminal_buffer, (char *)term_buf, 80*25);
-	term_buf = terminal_buffer;
+	memcpy((void *)term_buf, (const void *) terminal_buffer, 80*50);
 }
 
 void reprint_buf()
@@ -51,7 +51,7 @@ void reprint_buf()
 	int old_y = terminal_row;
 	terminal_column = 0;
 	terminal_row = 0;
-	printf(term_buf);
+	memcpy((void *)terminal_buffer, (const void *) term_buf, 80*50);
 	terminal_column = old_x;
 	terminal_row = old_y;
 }
@@ -61,11 +61,24 @@ void terminal_setcolor(uint8_t color)
 	terminal_color = color;
 }
 
+void mouse_print(size_t x, size_t y, uint8_t color, const char* data)
+{
+	uint8_t old_color = terminal_color;
+	int old_x = terminal_column;
+	int old_y = terminal_row;
+	terminal_column = x;
+	terminal_row = y;
+	terminal_color = color;
+	printf(data);
+	terminal_column = old_x;
+	terminal_row = old_y;
+	terminal_color = old_color;
+}
 
-void terminal_putentryat2(const char c, uint8_t color, size_t x, size_t y) 
+void terminal_putentryat2(const char *c, uint8_t color, size_t x, size_t y) 
 {
 	const size_t index = y * VGA_WIDTH + x;
-	terminal_buffer[index] = vga_entry(c, color);
+	terminal_buffer[index] = vga_entry((unsigned char) c, color);
 }
 
 void terminal_putentryat(char c, uint8_t color, size_t x, size_t y) 

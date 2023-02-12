@@ -25,10 +25,9 @@ build: $(FILES) link
 link: $(FILES)
 	@echo LD $(KERNEL)
 	@$(LD) $(LDFLAGS) -o $(KERNEL) $(FILES)
-	@cat kernmap.map | egrep '*0x00000000.*' | egrep -v '\.' | tr -s ' ' | sed -e 's/0x00000000//' > kernmap.small
 
 clean:
 	@-rm $(FILES)
 
-run:
+run: build
 	@qemu-system-$(ARCH) -hda ext2.img -kernel $(KERNEL) -rtc base=localtime -device sb16,audiodev=a -audiodev sdl,id=a -display sdl -initrd phonk"("DO_NOT_TOUCH_FOR_TESTING")".wav

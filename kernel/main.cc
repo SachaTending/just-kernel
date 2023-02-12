@@ -4,10 +4,11 @@
 #include <tty.h>
 #include <idt.h>
 #include <port_io.h>
-#include <printf2.h>
-#include <string.h>
+#include "printf.h"
+#include "string.h"
 #include <multiboot.h>
 #include <vga.h>
+#include "pci.h"
 
 void log(const char *logd);
 
@@ -22,16 +23,6 @@ extern void callConstructors(void)
 {
     for(constructor* i = &start_ctors;i != &end_ctors; i++)
         (*i)();
-}
-
-int strCmp(const char* s1, const char* s2)
-{
-    while(*s1 && (*s1 == *s2))
-    {
-        s1++;
-        s2++;
-    }
-    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
 }
 
 void print_russia() // made in russia xd
@@ -71,7 +62,7 @@ void keyb(struct regs *r)
 {
 	log("event.keypress ");
 	int input = inb(0x60);
-	printf("data: 0x%x or %d\n", input, input);
+	printf("data: 0x%x or %d char %s\n", input, input, input);
 	if (keyb_reading)
 	{
 		keyb_received = true;
@@ -122,7 +113,7 @@ int old_mouse_y;
 int old_old_mouse_x;
 int old_old_mouse_y;
 
-void terminal_putentryat2(const char c, uint8_t color, size_t x, size_t y);
+void mouse_print(size_t x, size_t y, uint8_t color, const char* data);
 
 void mouse(struct regs * r)
 {
@@ -176,15 +167,15 @@ void mouse(struct regs * r)
             if(mouse_y > 25 - 1)
                 mouse_y = 25 - 1;
 			mouse_cycle = 0;
-            char cursor = "h";
-			const char cursor_lol = "m";
+            char *cursor = "h";
+			const char *cursor_lol = "m";
             void save_buf();
             void reprint_buf();
             reprint_buf();
             save_buf();
-			terminal_putentryat2(0, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), old_old_mouse_x, old_old_mouse_y);
-			terminal_putentryat2(cursor, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), old_mouse_x, old_mouse_y);
-			terminal_putentryat2(cursor_lol, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), mouse_x, mouse_y);
+			//terminal_putentryat2(0, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), old_old_mouse_x, old_old_mouse_y);
+			//mouse_print(old_mouse_x, old_mouse_y, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), " ");
+			mouse_print(mouse_x, mouse_y, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), "THIS IS MOUSE");
 			break;
 		
 	}
@@ -326,21 +317,38 @@ static void fillrect(unsigned char *vram, unsigned char r, unsigned char g, unsi
     }
 }
 
- 
-// rendering one of the character, given its font_data
+void mm_init(uint32_t kernel_end);
+char* malloc(size_t size);
+void free(void *mem);
+void mm_print_out();
+
+class abc {
+    public:
+        void sus();
+};
+
+void abc::sus()
+{
+    log("abc::sus called!\n");
+}
+
 extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
     //write_regs(g_80x50_text);
+    PCI pci;
     write_font(g_8x16_font, 16);
     font512();
     //sset_text_mode(1);
     write_font(g_8x8_font, 8);
 	terminal_initialize();
-	log("Just kernel ver 1.0 beta\n");
-    if (CHECK_FLAG (mbi->flags, 3))
-	log("kernel location:");printf("0x%x kernel end: 0x%x kernel size: 0x%x (or %d)\n", (unsigned)&_kernel_start, (unsigned)&_kernel_end, (unsigned)&_kernel_end - (unsigned)&_kernel_start, (unsigned)&_kernel_end - (unsigned)&_kernel_start);
+	log("Just kernel ver 1.5 beta by TendingStream73#5806\n");
+    log("Booted by: ");printf("%s\n", mbi->boot_loader_name);
+	log("kernel location:");printf("0x%x kernel end: 0x%x kernel size: %d\n", (unsigned)&_kernel_start, (unsigned)&_kernel_end, (unsigned)&_kernel_end - (unsigned)&_kernel_start);
 	log("Hello from ");print_russia();terminal_writestring("!\n");
 	log("Note: Sometimes, system triggers excepton, dont worry, and reboot\nbug catched on qemu\n");
+    mm_init((unsigned)&_kernel_end);
+    pci.pci_init();
+    pci.pci_proc_dump();
 	// terminal_writestring("Builded on host: ");terminal_writestring(_HOST_USER);terminal_writestring("@");terminal_writestring(_HOST_NAME);terminal_writestring("\n");
     log("Calling constructros...\n");
 	callConstructors();
@@ -356,14 +364,14 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
 	printf("%d decimal\n", 123);
 	printf("%x hex\n", 0xABC);
     write_regs(g_320x200x256_modex);
-    uint32_t * frmabebuffer=get_fb_seg();
+    uint32_t * frmabebuffer=(uint32_t *)get_fb_seg();
     write_regs(g_80x50_text);
     printf("Frmabebuffer at 0x%x\n", frmabebuffer);
     //printf("We going to graphics!\n");
     int i2;
     while (i2<10000000) {i2++;}
     //write_regs(g_320x200x256_modex);
-    memset(0xA0000, 0, 320*200);
+    memset((void *)frmabebuffer, 0, 320*200);
     i2 = 0;
     int offest2;
     /*
@@ -381,6 +389,9 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
 	//g_write_pixel = write_pixel8x;
 	//draw_x();
     //play_simple_sound(mbi);
+    log("Testing C++ features...\n");
+    abc Abc;
+    Abc.sus();
     log("System halted becuase idk what to do\n");
     ata_is_sus();
     //trigger_gp();
