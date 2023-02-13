@@ -334,6 +334,19 @@ void abc::sus()
 
 void drawchar(unsigned char c, int x, int y, int fgcolor, int bgcolor);
 
+unsigned int *tga_parse(unsigned char *ptr, int size);
+
+
+
+void draw_icon(int x, int y, int w, int h, unsigned int *pixels) {
+    int j, l;
+    for (l = j = 0; l < h; l++) {
+        for (i = 0; i < w; i++, j++) {
+            write_pixel8x(x + i, y + l, pixels[j]);
+        }
+    }
+}
+
 extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
     //write_regs(g_80x50_text);
@@ -372,11 +385,16 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
     printf("We going to graphics!\n");
     int i2;
     while (i2<10000000) {i2++;}
-    write_regs(g_320x200x256_modex);
+    extern char _binary_img_tga_start;
+    printf("img.tga start: 0x%x\n", &_binary_img_tga_start);
+    unsigned int *out = tga_parse((unsigned char *)&_binary_img_tga_start, 1000); 
+    //write_regs(g_320x200x256_modex);
     memset(0xA0000, 0, 320*200);
+    draw_icon(1, 1, 100, 100, out);
+    printf("%d\n", out);
     i2 = 0;
     int offest2;
-    drawchar("b", 10, 10, 10, 255);
+    //drawchar("b", 10, 10, 10, 255);
     /*
     while (i2<256)
     {

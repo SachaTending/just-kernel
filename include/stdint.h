@@ -8,5 +8,7 @@ typedef unsigned long int uint64_t;
 
 typedef unsigned long int uintptr_t;
 
+#define UINT_MAX 4294967295
+
 
 #endif
