@@ -332,6 +332,8 @@ void abc::sus()
     log("abc::sus called!\n");
 }
 
+void drawchar(unsigned char c, int x, int y, int fgcolor, int bgcolor);
+
 extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
     //write_regs(g_80x50_text);
@@ -367,13 +369,14 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
     uint32_t * frmabebuffer=(uint32_t *)get_fb_seg();
     write_regs(g_80x50_text);
     printf("Frmabebuffer at 0x%x\n", frmabebuffer);
-    //printf("We going to graphics!\n");
+    printf("We going to graphics!\n");
     int i2;
     while (i2<10000000) {i2++;}
-    //write_regs(g_320x200x256_modex);
-    memset((void *)frmabebuffer, 0, 320*200);
+    write_regs(g_320x200x256_modex);
+    memset(0xA0000, 0, 320*200);
     i2 = 0;
     int offest2;
+    drawchar("b", 10, 10, 10, 255);
     /*
     while (i2<256)
     {

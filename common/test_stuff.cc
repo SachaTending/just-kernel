@@ -154,3 +154,27 @@ void read_rtc() {
             if(year < CURRENT_YEAR) year += 100;
       }
 }
+
+#include "vga.h"
+
+unsigned char *font;
+
+MODULE_START_CALL void font_init()
+{
+      printf("setting font for graphics...");
+      font = (unsigned char *)g_8x8_font;
+}
+
+
+void drawchar(unsigned char c, int x, int y, int fgcolor, int bgcolor)
+{
+	int cx,cy;
+	int mask[8]={1,2,4,8,16,32,64,128};
+	unsigned char *glyph=font+(int)c*16;
+ 
+	for(cy=0;cy<16;cy++){
+		for(cx=0;cx<8;cx++){
+			write_pixel8x(x+cx,y+cy-12,glyph[cy]&mask[cx]?fgcolor:bgcolor);
+		}
+	}
+}
