@@ -5,7 +5,8 @@
 #include <module.h>
 #include <idt.h>
 #include <multiboot.h>
-#include <string.h>
+#include "string.h"
+#include "malloc.h"
 
 typedef double f64;
 
@@ -94,12 +95,13 @@ f64 cos(f64 x);
 #define DSP_VOLUME  0x22
 #define DSP_IRQ     0x80
 
-#define SAMPLE_RATE     44100
+#define SAMPLE_RATE     48000
 #define BUFFER_MS       40
 
 #define DSP_HALT_SINGLE_CYCLE_DMA 0x00D0
 
-#define BUFFER_SIZE ((size_t) (SAMPLE_RATE * (BUFFER_MS / 1000.0)))
+// #define BUFFER_SIZE ((size_t) (SAMPLE_RATE * (BUFFER_MS / 500.0)))
+#define BUFFER_SIZE (128 * 1024)
 
 #define E 2.71828
 #define PI 3.14159265358979323846264338327950
@@ -163,7 +165,7 @@ static void set_sample_rate(uint16_t hz) {
     dsp_write((uint8_t) ((hz >> 8) & 0xFF));
     dsp_write((uint8_t) (hz & 0xFF));
 }
-char buf[50] = {};
+static int16_t *buf;
 
 int position = 50;
 
@@ -219,25 +221,28 @@ void xxd(void * data, unsigned int len)
 static void sb16_irq_handler(struct regs *regs) {
     buffer_flip = !buffer_flip;
     //printf("SB16: Interrupt triggered!\n");
-    position++;
+    position = position + BUFFER_SIZE;
     //printf("%d %x %s\n", position, cur->mod_start + position, (char *)((char *) current->data)[position]);
     //memset(cur->mod_start+position, (unsigned)&buf, 50);
     int pos = cur->mod_start+position;
-    memset(buf,pos,40);
+    memset((void *)buf, 0, BUFFER_SIZE);
+    memcpy((void *)buf,(const void *)cur->mod_start+position,BUFFER_SIZE);
     // dsp_write(DSP_HALT_SINGLE_CYCLE_DMA);
-    //transfer(buf, 12);
+    //transfer(buf, BUFFER_SIZE);
     //printf("%x\n", buf);
     //printf("%d 0x%x\n", pos, pos);
     //xxd(buf,1);
     // dsp_write(DSP_HALT_SINGLE_CYCLE_DMA);
-    inb(DSP_READ_STATUS);
-    inb(DSP_ACK_16);
+    int status = inb(DSP_READ_STATUS);
+    printf("SB16: DSP Read status: %d\n", status);
+    status = inb(DSP_ACK_16);
+    printf("SB16: DSP ACK: %d\n", status);
 }
 
 #include <bruh.h>
 
 
-MODULE_START_CALL void init_sb16()
+void init_sb16()
 {
     return;
     printf("SB16: initializating...\n");
@@ -271,6 +276,7 @@ void play_simple_sound(multiboot_info_t *mbi)
     for (i = 0, mod = (multiboot_module_t *) mbi->mods_addr;
        i < mbi->mods_count;
            i++, mod++) {
+            reset_sb16();
             current = (wavehdr_t *) mod->mod_start;
             printf("SB16: channels: %d\n", current->channel);
             printf("SB16: data len: %d\n", current->data_len);
@@ -280,18 +286,22 @@ void play_simple_sound(multiboot_info_t *mbi)
             outportb(DSP_MIXER, DSP_IRQ);
             outportb(DSP_MIXER_DATA, MIXER_IRQ_DATA);
             set_sample_rate(48000);
-            uint16_t sample_count = (current->data_len / 2) - 1;
+            uint16_t sample_count = (BUFFER_SIZE / 2) - 1;
             dsp_write(DSP_PLAY | DSP_PROG_16 | DSP_AUTO_INIT);
-            dsp_write(DSP_SIGNED | DSP_STEREO);
+            dsp_write(DSP_UNSIGNED | DSP_STEREO);
             dsp_write((uint8_t) ((sample_count >> 0) & 0xFF));
             dsp_write((uint8_t) ((sample_count >> 8) & 0xFF));
             dsp_write(DSP_ON);
             dsp_write(DSP_ON_16);
+            printf("SB16: Allocating buffer...\n");
+            printf("SB16: Buffer size: %d\n", BUFFER_SIZE);
+            buf = (void *)malloc(BUFFER_SIZE);
             position = 1;
             cur = mod;
-            memset((unsigned)&buf,cur->mod_start+position,40);
-            breakpoint();
-            transfer(buf, 26);
+            printf("SB16: Buffer allocated at 0x%x\n", &buf);
+            memset((void *)buf, 0, BUFFER_SIZE);
+            memcpy((void *)buf,(const void *)(current->data+position),BUFFER_SIZE);
+            transfer((void *)buf, BUFFER_SIZE);
         }
 }
 

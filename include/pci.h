@@ -32,10 +32,12 @@ class PCI {
         void pci_probe();
         void add_pci_device(pci_device *pdev);
 
-        uint16_t pci_read_word(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset);
+        uint32_t pci_read_word(uint32_t bus, uint32_t dev, uint32_t func, uint32_t reg);
 
         uint16_t getVendorID(uint16_t bus, uint16_t device, uint16_t function);
-        uint16_t getDeviceID(uint16_t bus, uint16_t device, uint16_t function);
+        uint32_t getDeviceID(uint32_t bus, uint32_t device, uint32_t function);
+		uint32_t getClassId(uint32_t bus, uint32_t device, uint32_t function);
+		uint32_t getSubClassId(uint32_t bus, uint32_t device, uint32_t function);
 
         void pci_register_driver(pci_driver *driv);
 

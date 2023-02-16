@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <idt.h>
 #include <module.h>
+#include "string.h"
+#include "malloc.h"
 
 #define cpuid(in, a, b, c, d) __asm__("cpuid": "=a" (a), "=b" (b), "=c" (c), "=d" (d) : "a" (in));
 
@@ -161,8 +163,9 @@ unsigned char *font;
 
 MODULE_START_CALL void font_init()
 {
+      font = (unsigned char *)malloc(sizeof(g_8x8_font));
       printf("setting font for graphics...");
-      font = (unsigned char *)g_8x8_font;
+      memcpy((void *)font, (const void *)g_8x8_font, sizeof(g_8x8_font));
 }
 
 
@@ -170,11 +173,12 @@ void drawchar(unsigned char c, int x, int y, int fgcolor, int bgcolor)
 {
 	int cx,cy;
 	int mask[8]={1,2,4,8,16,32,64,128};
-	unsigned char *glyph=font+(int)c*16;
+	unsigned char *glyph=font+(int)c*8;
  
 	for(cy=0;cy<16;cy++){
 		for(cx=0;cx<8;cx++){
-			write_pixel8x(x+cx,y+cy-12,glyph[cy]&mask[cx]?fgcolor:bgcolor);
+			// write_pixel8x(x+cx,y+cy-12,glyph[cy]&mask[cx]?fgcolor:bgcolor);
+                  write_pixel8x(x+cx,y+cy-12,50);
 		}
 	}
 }

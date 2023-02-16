@@ -30,4 +30,4 @@ clean:
 	@-rm $(FILES)
 
 run: build
-	@qemu-system-$(ARCH) -hda ext2.img -kernel $(KERNEL) -rtc base=localtime -device sb16,audiodev=a -audiodev sdl,id=a -display sdl -initrd phonk"("DO_NOT_TOUCH_FOR_TESTING")".wav
+	@qemu-system-$(ARCH) -hda ext2.img -kernel $(KERNEL) -rtc base=localtime -device sb16,audiodev=a -audiodev sdl,id=a -display sdl -initrd phonk"("DO_NOT_TOUCH_FOR_TESTING")".wav -device ac97
