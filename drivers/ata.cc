@@ -4,7 +4,7 @@
 #include <ata.h>
 #include <module.h>
 #include <device.h>
-
+#include "fat16.h"
 
 
 #define ATA_PRIMARY_IO 0x1F0
@@ -204,6 +204,12 @@ void ata_is_sus()
 	dev->priv = priv;
 	dev->read = ata_read;
 	printf("ATA: bus 0 drive 0 name %s\n", dev->name);
-	ext2_scan_dev(dev);
-	printf("ATA: ext2_scan_dev(dev) done");
+	u8 *img = FatAllocImage(512 * 2);
+	ata_read_one(img, 0, dev);
+	uint seccount = FatGetTotalSectorCount(img);
+	printf("ATA: FS: FAT16 Sector count: %d\n", seccount);
+	img = FatAllocImage(seccount);
+	ata_read(img, 0, seccount, dev);
+	DirEntry *rootdir = FatGetRootDirectory(img);
+	printf("ATA: Root dir name: %s\n", rootdir->name);
 }

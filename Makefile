@@ -1,11 +1,12 @@
 CFLAGS = -I include -m32 -march=i386 -c -I include -fpermissive -g
 LDFLAGS = -A i386 -melf_i386 -T link.ld -Map=kernmap.map
 AS=NASM
-ASFLAGS=-felf32
+ASFLAGS=-felf32 -g
 KERNEL=kernel.bin
 ARCH=i386
 
 FILES = kernel/boot.o kernel/main.o kernel/constructor_test.o \
+	kernel/ap_trampoline.o \
 	common/tty.o common/string.o common/port_io.o common/printf.o \
 	common/math.o common/test_stuff.o
 
@@ -21,6 +22,9 @@ build: $(FILES) link
 	@echo NASM $@
 	@nasm $(ASFLAGS) -o $@ $<
 
+.S.o:
+	@echo GAS $@
+	@gcc $(CFLAGS) -o $@ $<
 
 link: $(FILES)
 	@echo LD $(KERNEL)
@@ -30,4 +34,4 @@ clean:
 	@-rm $(FILES)
 
 run: build
-	@qemu-system-$(ARCH) -hda ext2.img -kernel $(KERNEL) -rtc base=localtime -device sb16,audiodev=a -audiodev sdl,id=a -display sdl -initrd phonk"("DO_NOT_TOUCH_FOR_TESTING")".wav -device ac97
+	@qemu-system-$(ARCH) -hda ext2.img -kernel $(KERNEL) -rtc base=localtime -device sb16,audiodev=a -audiodev sdl,id=a -serial stdio -smp cpus=2,cores=2

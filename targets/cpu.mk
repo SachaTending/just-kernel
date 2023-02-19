@@ -1,0 +1,1 @@
+FILES += cpu/local_apic.o cpu/ioapic.o

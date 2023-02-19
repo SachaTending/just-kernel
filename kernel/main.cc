@@ -34,6 +34,7 @@ void print_russia() // made in russia xd
 	terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK));
 	printf("ia");
 	terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK)); // Restore colors
+    printf("\n");
 }
 
 
@@ -183,7 +184,6 @@ void mouse(struct regs * r)
 
 void timer_call(struct regs *r)
 {
-	//i++;
 }
 
 static inline uint64_t rdtsc()
@@ -333,6 +333,9 @@ void abc::sus()
 }
 
 void drawchar(unsigned char c, int x, int y, int fgcolor, int bgcolor);
+void LocalApicInit();
+
+extern "C" void ap_trampoline(void);
 
 extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
@@ -352,8 +355,12 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
     pci.pci_init();
     pci.pci_proc_dump();
 	// terminal_writestring("Builded on host: ");terminal_writestring(_HOST_USER);terminal_writestring("@");terminal_writestring(_HOST_NAME);terminal_writestring("\n");
+    //payload();
     log("Calling constructros...\n");
-	callConstructors();
+    printf("0x%x\n", ap_trampoline);
+	LocalApicInit();
+    callConstructors();
+    memcpy((void*)0x8000, ap_trampoline, 4096);
 	log("Installing interrupts...\n");
 	install_mouse();
 	install_ints();
@@ -388,7 +395,7 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
     abc Abc;
     Abc.sus();
     log("System halted becuase idk what to do\n");
-    ata_is_sus();
+    //ata_is_sus();
     //trigger_gp();
 	// for (;;) {asm volatile("hlt");}
     for (;;)

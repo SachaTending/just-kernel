@@ -1,0 +1,1 @@
+FILES += acpi/acpi.o

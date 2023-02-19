@@ -33,11 +33,21 @@ stack_bottom:
 resb 16384 ; 16 KiB
 stack_top:
 
+align 16
+stack_bottom2:
+resb 16384 ; 16 KiB
+stack_top2:
+
 ; The linker script specifies _start as the entry point to the kernel and the
 ; bootloader will jump to this position once the kernel has been loaded. It
 ; doesn't make sense to return from this function as the bootloader is gone.
 ; Declare _start as a function symbol with the given symbol size.
 section .text
+
+[BITS 32]
+
+global stack_top2
+
 global _start:function (_start.end - _start)
 _start:
 	; The bootloader has loaded us into 32-bit protected mode on a x86
