@@ -8,5 +8,8 @@ typedef unsigned long int uint64_t;
 
 typedef unsigned long int uintptr_t;
 
+typedef bool boolean;
+
+typedef unsigned char byte;
 
 #endif

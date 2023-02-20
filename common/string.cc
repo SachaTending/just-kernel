@@ -1,5 +1,6 @@
-#include <string.h>
+#include "string.h"
 #include <stdint.h>
+#include "printf.h"
 
 size_t strlen(const char* str) 
 {
@@ -101,4 +102,17 @@ int atoi(char * string) {
         return -result;
     }
     return result;
+}
+
+void print_to_none(void)
+{
+
+}
+
+void sprintf(char *buf, char *a, ...)
+{
+    va_list ap;
+    va_start(ap, a);
+    vsprintf(buf, print_to_none, a, ap);
+    va_end(ap);
 }

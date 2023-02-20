@@ -148,9 +148,9 @@ static void AcpiParseApic(AcpiMadt *madt)
             }
             if (s->apicId != 0)
             {
-                outportb(0xa1, 0xff);
-                outportb(0x21, 0xff);
-                asm volatile ("cli");
+                //outportb(0xa1, 0xff);
+                //outportb(0x21, 0xff);
+                //asm volatile ("cli");
                 printf("ACPI: Initializating CPU...\n");
                 /*
                 *((volatile uint32_t*)(g_localApicAddr + 0x280)) = 0;                                                                             // clear APIC errors
@@ -161,7 +161,7 @@ static void AcpiParseApic(AcpiMadt *madt)
                 *((volatile uint32_t*)(g_localApicAddr + 0x300)) = (*((volatile uint32_t*)(g_localApicAddr + 0x300)) & 0xfff00000) | 0x008500;          // deassert
                 do { __asm__ __volatile__ ("pause" : : : "memory"); }while(*((volatile uint32_t*)(g_localApicAddr + 0x300)) & (1 << 12));         // wait for delivery                                                                                                             // wait 10 msec
                 //for (int i; i++; i<100) { asm volatile ("nop");}*/
-                LocalApicSendInit(s->acpiProcessorId);
+                //LocalApicSendInit(s->acpiProcessorId);
 
                 printf("ACPI: Sending vector to CPU...\n");
                 printf("ACPI: Payload address: 0x%x\n", 0x8000);
@@ -172,7 +172,7 @@ static void AcpiParseApic(AcpiMadt *madt)
                     *((volatile uint32_t*)(g_localApicAddr + 0x300)) = (*((volatile uint32_t*)(g_localApicAddr + 0x300)) & 0xfff0f800) | 0x000608;  // trigger STARTUP IPI for 0800:0000                                                                                                      // wait 200 usec
                     do { __asm__ __volatile__ ("pause" : : : "memory"); }while(*((volatile uint32_t*)(g_localApicAddr + 0x300)) & (1 << 12)); // wait for delivery
                 */
-                LocalApicSendStartup(s->acpiProcessorId, 0x8000);
+                //LocalApicSendStartup(s->acpiProcessorId, 0x8000);
                 bspdone = 1;
                 
             }
