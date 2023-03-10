@@ -122,6 +122,8 @@ extern "C" uint8_t bspdone = 0;
 
 static void AcpiParseApic(AcpiMadt *madt)
 {
+    printf("ACPI: ACPI Disabled.");
+    return;
     s_madt = madt;
 
     printf("ACPI: Local APIC Address = 0x%x\n", madt->localApicAddr);

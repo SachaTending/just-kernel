@@ -182,8 +182,11 @@ void mouse(struct regs * r)
 	}
 }
 
+u32 g_pitTicks;
+
 void timer_call(struct regs *r)
 {
+    g_pitTicks++;
 }
 
 static inline uint64_t rdtsc()
@@ -337,12 +340,15 @@ void LocalApicInit();
 
 extern "C" void ap_trampoline(void);
 
+void PitInit();
+
 extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
     //write_regs(g_80x50_text);
     PCI pci;
     write_font(g_8x16_font, 16);
     font512();
+    PitInit();
     //sset_text_mode(1);
     write_font(g_8x8_font, 8);
 	terminal_initialize();
@@ -352,7 +358,6 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
 	log("Hello from ");print_russia();terminal_writestring("!\n");
 	log("Note: Sometimes, system triggers excepton, dont worry, and reboot\nbug catched on qemu\n");
     mm_init((unsigned)&_kernel_end);
-    pci.pci_init();
     pci.pci_proc_dump();
 	// terminal_writestring("Builded on host: ");terminal_writestring(_HOST_USER);terminal_writestring("@");terminal_writestring(_HOST_NAME);terminal_writestring("\n");
     //payload();
@@ -369,6 +374,7 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
     outportb(0x70, 0x8B);		// set the index again (a read will reset the index to register D)
     outportb(0x71, prev | 0x40);	// write the previous value ORed with 0x40. This turns on bit 6 of register B
 	asm volatile("hlt");
+    pci.pci_init();
 	log("Testing printf...\n");
 	printf("%d decimal\n", 123);
 	printf("%x hex\n", 0xABC);

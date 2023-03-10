@@ -1,0 +1,1 @@
+FILES += drivers/usb/usb_controller.o drivers/usb/dev.o drivers/usb/uhci.o

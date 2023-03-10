@@ -4,42 +4,6 @@
 #include "port_io.h"
 #include "malloc.h"
 
-#define PCI_CONFIG_PORT      0x0CF8
-#define PCI_DATA_PORT        0x0CFC
-
-#define PCI_MAX_BUSES        255
-#define PCI_MAX_DEVICES      32
-#define PCI_MAX_FUNCTIONS    8
-
-#define PCI_HEADERTYPE_NORMAL        0
-#define PCI_HEADERTYPE_BRIDGE        1
-#define PCI_HEADERTYPE_CARDBUS       2
-#define PCI_HEADERTYPE_MULTIFUNC     0x80
-
-typedef uint32_t u32;
-typedef uint8_t u8;
-typedef uint16_t u16;
-
-typedef union 
-{
-	struct
-	{
-		u16 vendorID;
-		u16 deviceID;
-		u16 commandReg;
-		u16 statusReg;
-		u8 revisionID;
-		u8 progIF;
-		u8 subClassCode;
-		u8 classCode;
-		u8 cachelineSize;
-		u8 latency;
-		u8 headerType;
-		u8 BIST;
-	} __attribute__((packed)) option;
-	u32 header[4];
-} __attribute__((packed)) PCIDevHeader;
-
 typedef struct 
 {
 	u32 class_code;
@@ -141,6 +105,8 @@ char *getVenIDFromDB(u16 venID)
     }
 }
 
+void PciGetBar(PciBar *bar, u32 bus, u32 dev, u32 func, uint index);
+
 char *GetPCIDevClassName(u32 class_code)
 {
 	int i;
@@ -175,9 +141,11 @@ void PrintPCIDevHeader(u32 bus, u32 dev, u32 func, PCIDevHeader *p_pciDevice)
 {
 	char *class_name;
 	char *venID_str = getVenIDFromDB(p_pciDevice->option.vendorID);
+	PciBar bar;
+	PciGetBar((PciBar *)&bar, bus, dev, func, 4);
 	printf("bus=0x%x dev=0x%x func=0x%x venID=0x%x(%s) devID=0x%x",
 			bus, dev, func, p_pciDevice->option.vendorID, venID_str, p_pciDevice->option.deviceID);
-			
+	printf(" bar0=0x%x", bar.u.address);		
 	class_name = GetPCIDevClassName(p_pciDevice->option.classCode);
 	if (class_name)
 		printf(" class_name=%s", class_name);
@@ -185,11 +153,69 @@ void PrintPCIDevHeader(u32 bus, u32 dev, u32 func, PCIDevHeader *p_pciDevice)
 	printf("\n");
 }
 
+void PciWrite32(uint id, uint reg, u32 data)
+{
+    u32 address = 0x80000000 | id | (reg & 0xfc);
+    outportb(PCI_CONFIG_ADDR, address);
+    outportb(PCI_CONFIG_DATA, data);
+}
+
+static void PciReadBar(u32 bus, u32 dev, u32 func, uint index, u32 *address, u32 *mask)
+{
+    uint reg = PCI_CONFIG_BAR0 + index * sizeof(u32);
+	PCI pci;
+    // Get address
+    *address = pci.pci_read_word(bus, dev, func, reg);
+
+    // Find out size of the bar
+    PciWrite32(PCI_MAKE_ID(bus, dev, func), reg, 0xffffffff);
+    *mask = pci.pci_read_word(bus, dev, func, reg);
+
+    // Restore adddress
+    PciWrite32(PCI_MAKE_ID(bus, dev, func), reg, *address);
+}
+
 void PCI::pci_proc_dump()
 {
 
 
 }
+
+void PciGetBar(PciBar *bar, u32 bus, u32 dev, u32 func, uint index)
+{
+    // Read pci bar register
+    u32 addressLow;
+    u32 maskLow;
+    PciReadBar(bus, dev, func, index, (u32 *)&addressLow, (u32 *)&maskLow);
+
+    if (addressLow & PCI_BAR_64)
+    {
+        // 64-bit mmio
+        u32 addressHigh;
+        u32 maskHigh;
+        PciReadBar(bus, dev, func, index + 1, (u32 *)&addressHigh, (u32 *)&maskHigh);
+
+        bar->u.address = (void *)(((uintptr_t)addressHigh << 32) | (addressLow & ~0xf));
+        bar->size = ~(((u64)maskHigh << 32) | (maskLow & ~0xf)) + 1;
+        bar->flags = addressLow & 0xf;
+    }
+    else if (addressLow & PCI_BAR_IO)
+    {
+        // i/o register
+        bar->u.port = (u16)(addressLow & ~0x3);
+        bar->size = (u16)(~(maskLow & ~0x3) + 1);
+        bar->flags = addressLow & 0x3;
+    }
+    else
+    {
+        // 32-bit mmio
+        bar->u.address = (void *)(uintptr_t)(addressLow & ~0xf);
+        bar->size = ~(maskLow & ~0xf) + 1;
+        bar->flags = addressLow & 0xf;
+    }
+}
+
+void UhciInit(u32 bus, u32 dev, u32 func, PCIDevHeader *info);
 
 void PCI::pci_init()
 {
@@ -207,6 +233,7 @@ void PCI::pci_init()
 				continue;
 				
 			PrintPCIDevHeader(bus, dev, func, &pci_device);
+			UhciInit(bus, dev, func, (PCIDevHeader *)&pci_device);
 			
 			if (pci_device.option.headerType & PCI_HEADERTYPE_MULTIFUNC)
 			{
