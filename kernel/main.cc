@@ -9,6 +9,7 @@
 #include <multiboot.h>
 #include <vga.h>
 #include "pci.h"
+#include "tasking.h"
 
 void log(const char *logd);
 
@@ -114,7 +115,14 @@ int old_mouse_y;
 int old_old_mouse_x;
 int old_old_mouse_y;
 
-void mouse_print(size_t x, size_t y, uint8_t color, const char* data);
+int old_old_old_mouse_x;
+int old_old_old_mouse_y;
+
+void mouse_print(size_t x, size_t y, uint8_t color, char data);
+
+void terminal_putentryat(char c, uint8_t color, size_t x, size_t y);
+
+size_t mx_arr[16] = {0};
 
 void mouse(struct regs * r)
 {
@@ -152,7 +160,10 @@ void mouse(struct regs * r)
 
             // Update mouse position
             // Transform delta values using some sort of log function
-			old_old_mouse_x = old_mouse_x;
+			old_old_old_mouse_x = old_old_mouse_x;
+			old_old_old_mouse_y = old_old_mouse_y;
+
+            old_old_mouse_x = old_mouse_x;
 			old_old_mouse_y = old_mouse_y;
 
 			old_mouse_x = mouse_x;
@@ -168,15 +179,19 @@ void mouse(struct regs * r)
             if(mouse_y > 25 - 1)
                 mouse_y = 25 - 1;
 			mouse_cycle = 0;
-            char *cursor = "h";
-			const char *cursor_lol = "m";
+            char cursor = '@';
+			char cursor_lol = '=';
+            const char *cursor_p = (const char *)&cursor;
             void save_buf();
             void reprint_buf();
-            reprint_buf();
-            save_buf();
+            //reprint_buf();
+            //save_buf();
 			//terminal_putentryat2(0, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), old_old_mouse_x, old_old_mouse_y);
-			//mouse_print(old_mouse_x, old_mouse_y, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), " ");
-			mouse_print(mouse_x, mouse_y, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), "THIS IS MOUSE");
+            mouse_print(old_old_old_mouse_x, old_old_old_mouse_y, vga_entry_color(VGA_COLOR_BLACK, VGA_COLOR_BLACK), ' ');
+            mouse_print(old_old_mouse_x, old_old_mouse_y, vga_entry_color(VGA_COLOR_BLACK, VGA_COLOR_BLACK), cursor_lol);
+			mouse_print(old_mouse_x, old_mouse_y, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), cursor_lol);
+			mouse_print(mouse_x, mouse_y, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), cursor);
+            //terminal_putentryat(cursor, mouse_x, mouse_y, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK));
 			break;
 		
 	}
@@ -218,6 +233,9 @@ void ide_secondary_irq(struct regs *r)
 	//printf("ATA: ide second irq triggered\n");
 }
 
+void int_64(struct regs *r) {
+    printf("im interrupt 64!\n");
+}
 
 void install_ints()
 {
@@ -227,10 +245,11 @@ void install_ints()
 	irq_install_handler(12, mouse);
     irq_install_handler(15, ide_secondary_irq);
     irq_install_handler(14, ide_primary_irq);
+    irq_install_handler(64, int_64);
 }
 
 void mouse_wait(uint8_t a_type) {
-    uint32_t _time_out=100000; //unsigned int
+    uint32_t _time_out=100000;
     if(a_type==0) {
         while(_time_out--) {
             if((inb(0x64) & 1)==1)
@@ -342,12 +361,15 @@ extern "C" void ap_trampoline(void);
 
 void PitInit();
 
+void AcpiInit();
+
 extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
     //write_regs(g_80x50_text);
     PCI pci;
     write_font(g_8x16_font, 16);
     font512();
+    write_regs(g_80x50_text);
     PitInit();
     //sset_text_mode(1);
     write_font(g_8x8_font, 8);
@@ -363,9 +385,8 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
     //payload();
     log("Calling constructros...\n");
     printf("0x%x\n", ap_trampoline);
-	LocalApicInit();
+    memcpy((void*)0x8000, (void*)&ap_trampoline, 4096);
     callConstructors();
-    memcpy((void*)0x8000, ap_trampoline, 4096);
 	log("Installing interrupts...\n");
 	install_mouse();
 	install_ints();
@@ -374,6 +395,7 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
     outportb(0x70, 0x8B);		// set the index again (a read will reset the index to register D)
     outportb(0x71, prev | 0x40);	// write the previous value ORed with 0x40. This turns on bit 6 of register B
 	asm volatile("hlt");
+    AcpiInit();
     pci.pci_init();
 	log("Testing printf...\n");
 	printf("%d decimal\n", 123);
@@ -397,15 +419,13 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
 	//g_write_pixel = write_pixel8x;
 	//draw_x();
     //play_simple_sound(mbi);
+    ata_is_sus();
     log("Testing C++ features...\n");
     abc Abc;
     Abc.sus();
-    log("System halted becuase idk what to do\n");
+    log("System switched to idle task");
     //ata_is_sus();
     //trigger_gp();
 	// for (;;) {asm volatile("hlt");}
-    for (;;)
-    {
-        asm volatile("hlt");
-    }
+    kernel_idle_task();
 }

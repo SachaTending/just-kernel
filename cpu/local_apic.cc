@@ -94,6 +94,36 @@ void LocalApicSendInit(unsigned int apic_id)
         ;
 }
 
+void LocalApicBroadcastInit()
+{
+    LocalApicOut(LAPIC_ICRHI, 0);
+    LocalApicOut(LAPIC_ICRLO, ICR_INIT | ICR_PHYSICAL
+        | ICR_ASSERT | ICR_EDGE | ICR_ALL_EXCLUDING_SELF);
+
+    while (LocalApicIn(LAPIC_ICRLO) & ICR_SEND_PENDING)
+        ;
+}
+
+// ------------------------------------------------------------------------------------------------
+void LocalApicBroadcastStartup(uint vector)
+{
+    LocalApicOut(LAPIC_ICRHI, 0);
+    LocalApicOut(LAPIC_ICRLO, vector | ICR_STARTUP
+        | ICR_PHYSICAL | ICR_ASSERT | ICR_EDGE | ICR_ALL_EXCLUDING_SELF);
+
+    while (LocalApicIn(LAPIC_ICRLO) & ICR_SEND_PENDING)
+        ;
+}
+
+void LocalApicSendInt(uint apic_id, u8 interrupt)
+{
+    LocalApicOut(LAPIC_ICRHI, apic_id << ICR_DESTINATION_SHIFT);
+    LocalApicOut(LAPIC_ICRLO, ICR_PHYSICAL
+        | ICR_ASSERT | ICR_EDGE | ICR_NO_SHORTHAND | interrupt);
+    while (LocalApicIn(LAPIC_ICRLO) & ICR_SEND_PENDING)
+        ;
+}
+
 void LocalApicSendStartup(unsigned int apic_id, unsigned int vector)
 {
     LocalApicOut(LAPIC_ICRHI, apic_id << ICR_DESTINATION_SHIFT);

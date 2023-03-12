@@ -1,1 +1,1 @@
-FILES += common/mmio.o
+FILES += common/mmio.o common/tasking.o

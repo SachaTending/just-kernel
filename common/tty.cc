@@ -14,7 +14,7 @@ void scroll() {
     // Move up
     void * start = (void*)terminal_buffer + 1 * VGA_WIDTH * 2;
     uint32_t size = terminal_row * VGA_WIDTH * 2;
-    if(terminal_row < 50)
+    if(terminal_row < 49)
         return;
     memcpy(terminal_buffer, start, size);
     // Delete
@@ -61,7 +61,7 @@ void terminal_setcolor(uint8_t color)
 	terminal_color = color;
 }
 
-void mouse_print(size_t x, size_t y, uint8_t color, const char* data)
+void mouse_print(size_t x, size_t y, uint8_t color, char data)
 {
 	uint8_t old_color = terminal_color;
 	int old_x = terminal_column;
@@ -69,7 +69,7 @@ void mouse_print(size_t x, size_t y, uint8_t color, const char* data)
 	terminal_column = x;
 	terminal_row = y;
 	terminal_color = color;
-	printf(data);
+	terminal_putchar(data);
 	terminal_column = old_x;
 	terminal_row = old_y;
 	terminal_color = old_color;
@@ -95,12 +95,16 @@ void terminal_putchar(char c)
         terminal_column = 0;
         terminal_row++;
     } else {
-		scroll();
-		terminal_putentryat(c, terminal_color, terminal_column, terminal_row);
-		if (++terminal_column == VGA_WIDTH) {
+		if (c == '\r') {
 			terminal_column = 0;
-			if (++terminal_row == VGA_HEIGHT)
-				terminal_row = 0;
+		} else {
+			scroll();
+			terminal_putentryat(c, terminal_color, terminal_column, terminal_row);
+			if (++terminal_column == VGA_WIDTH) {
+				terminal_column = 0;
+				if (++terminal_row == VGA_HEIGHT)
+					terminal_row = 0;
+			}
 		}
 	}
 	update_cursor();

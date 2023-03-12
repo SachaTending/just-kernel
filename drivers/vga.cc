@@ -31,6 +31,8 @@
 #define	pokew(S,O,V)		*(unsigned short *)(16uL * (S) + (O)) = (V)
 #define	_vmemwr(DS,DO,S,N)	memcpy((char *)((DS) * 16 + (DO)), S, N)
 
+void update_cursor();
+
 void write_regs(unsigned char *regs)
 {
 	unsigned i;
@@ -78,6 +80,7 @@ void write_regs(unsigned char *regs)
 /* lock 16-color palette and unblank display */
 	(void)inb(VGA_INSTAT_READ);
 	outportb(VGA_AC_INDEX, 0x20);
+	update_cursor();
 }
 
 unsigned get_fb_seg(void)

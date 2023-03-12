@@ -99,7 +99,7 @@ extern void irq14();
 extern void irq15();
 }
 
-void *irq_routines[16] =
+void *irq_routines[128] =
 {
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0

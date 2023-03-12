@@ -3,6 +3,7 @@
 #include "string.h"
 #include "module.h"
 #include "port_io.h"
+#include "pit.h"
 
 typedef struct AcpiHeader
 {
@@ -105,6 +106,8 @@ static void AcpiParseFacp(AcpiFadt *facp)
 void LocalApicSendInit(unsigned int apic_id);
 void LocalApicSendStartup(unsigned int apic_id, unsigned int vector);
 
+int activeCpus = 0;
+
 extern "C" void CpuPayload()
 {
     printf("Hello, im payload running from application cpu, this message indicates im booted up.");
@@ -112,6 +115,7 @@ extern "C" void CpuPayload()
 
 extern "C" void ap_startup(int apicid)
 {
+    activeCpus++;
     CpuPayload();
     while(1);
 }
@@ -120,15 +124,22 @@ extern "C" void payload();
 
 extern "C" uint8_t bspdone = 0;
 
+void LocalApicBroadcastStartup(uint vector);
+void LocalApicBroadcastInit();
+
+void IoApicInit();
+void LocalApicInit();
+
+void LocalApicSendInt(uint apic_id, u8 interrupt);
 static void AcpiParseApic(AcpiMadt *madt)
 {
-    printf("ACPI: ACPI Disabled.");
-    return;
+    //printf("ACPI: ACPI Disabled.");
+    //return;
     s_madt = madt;
 
     printf("ACPI: Local APIC Address = 0x%x\n", madt->localApicAddr);
     g_localApicAddr = (u8 *)(uintptr_t)madt->localApicAddr;
-
+    LocalApicInit();
     u8 *p = (u8 *)(madt + 1);
     u8 *end = (u8 *)madt + madt->header.length;
 
@@ -150,10 +161,11 @@ static void AcpiParseApic(AcpiMadt *madt)
             }
             if (s->apicId != 0)
             {
-                outportb(0xa1, 0xff);
-                outportb(0x21, 0xff);
-                asm volatile ("cli");
+                //outportb(0xa1, 0xff);
+                //outportb(0x21, 0xff);
+                //asm volatile ("cli");
                 printf("ACPI: Initializating CPU...\n");
+                //LocalApicSendInt(s->apicId, 64);
                 /*
                 *((volatile uint32_t*)(g_localApicAddr + 0x280)) = 0;                                                                             // clear APIC errors
                 *((volatile uint32_t*)(g_localApicAddr + 0x310)) = (*((volatile uint32_t*)(g_localApicAddr + 0x310)) & 0x00ffffff) | (s->apicId << 24);         // select AP
@@ -163,10 +175,10 @@ static void AcpiParseApic(AcpiMadt *madt)
                 *((volatile uint32_t*)(g_localApicAddr + 0x300)) = (*((volatile uint32_t*)(g_localApicAddr + 0x300)) & 0xfff00000) | 0x008500;          // deassert
                 do { __asm__ __volatile__ ("pause" : : : "memory"); }while(*((volatile uint32_t*)(g_localApicAddr + 0x300)) & (1 << 12));         // wait for delivery                                                                                                             // wait 10 msec
                 //for (int i; i++; i<100) { asm volatile ("nop");}*/
-                LocalApicSendInit(s->acpiProcessorId);
+                //LocalApicSendInit(s->acpiProcessorId);
 
-                printf("ACPI: Sending vector to CPU...\n");
-                printf("ACPI: Payload address: 0x%x\n", 0x8000);
+                //printf("ACPI: Sending vector to CPU...\n");
+                //printf("ACPI: Payload address: 0x%x\n", 0x8000);
                 /*
                 for(int j = 0; j < 2; j++) {
                     *((volatile uint32_t*)(g_localApicAddr + 0x280)) = 0;                                                                     // clear APIC errors
@@ -174,9 +186,8 @@ static void AcpiParseApic(AcpiMadt *madt)
                     *((volatile uint32_t*)(g_localApicAddr + 0x300)) = (*((volatile uint32_t*)(g_localApicAddr + 0x300)) & 0xfff0f800) | 0x000608;  // trigger STARTUP IPI for 0800:0000                                                                                                      // wait 200 usec
                     do { __asm__ __volatile__ ("pause" : : : "memory"); }while(*((volatile uint32_t*)(g_localApicAddr + 0x300)) & (1 << 12)); // wait for delivery
                 */
-                LocalApicSendStartup(s->acpiProcessorId, 0x8000);
-                bspdone = 1;
-                
+
+                //asm volatile ("sti");
             }
         }
         else if (type == APIC_TYPE_IO_APIC)
@@ -185,6 +196,7 @@ static void AcpiParseApic(AcpiMadt *madt)
 
             printf("ACPI: Found I/O APIC: ID: %d ADDR: 0x%x GLOBAL SYSTEM INTERRUPT BASE: %d\n", s->ioApicId, s->ioApicAddress, s->globalSystemInterruptBase);
             g_ioApicAddr = (u8 *)(uintptr_t)s->ioApicAddress;
+            IoApicInit();
         }
         else if (type == APIC_TYPE_INTERRUPT_OVERRIDE)
         {
@@ -199,6 +211,26 @@ static void AcpiParseApic(AcpiMadt *madt)
 
         p += length;
     }
+    asm volatile ("sti");
+    LocalApicBroadcastInit();
+    PitWait(10);
+    LocalApicBroadcastStartup(0x8000);
+    bspdone = 1;
+    printf("ACPI: Detected cpus: %d\n", g_acpiCpuCount);
+    printf("ACPI: Initializating cpus...\n");
+    while (activeCpus != g_acpiCpuCount) {
+        PitWait(100);
+        //printf("CPUS: %d\r", activeCpus);
+        for (int cpu = 0;cpu < g_acpiCpuCount;cpu++) {
+            if (cpu > g_acpiCpuCount) {
+                break;
+            }
+            printf("CPU: %d\r", cpu);
+            LocalApicSendInt(cpu, 64);
+        }
+        break;
+    }
+    //asm volatile ("sti");
 }
 
 
@@ -304,7 +336,7 @@ static bool AcpiParseRsdp(uint8_t *p) // From https://github.com/pdoane/osdev/bl
     return true;
 }
 
-MODULE_START_CALL void AcpiInit() // From https://github.com/pdoane/osdev/blob/master/acpi/acpi.c
+void AcpiInit() // From https://github.com/pdoane/osdev/blob/master/acpi/acpi.c
 {
     // TODO - Search Extended BIOS Area
 

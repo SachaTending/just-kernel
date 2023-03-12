@@ -308,6 +308,7 @@ static uint UhciResetPort(UhciController *hc, uint port)
     uint status = 0;
     for (uint i = 0; i < 10; ++i)
     {
+        //printf("%d\r", port);
         // Delay
         PitWait(10);
 
@@ -599,6 +600,7 @@ static void UhciProbe(UhciController *hc)
     for (uint port = 0; port < portCount; ++port)
     {
         // Reset port
+        printf("UHCI: Resetting port %d...\n", port);
         uint status = UhciResetPort(hc, port);
 
         if (status & PORT_ENABLE)
@@ -635,8 +637,6 @@ void UhciInit(u32 bus, u32 dev, u32 func, PCIDevHeader *info)
         return;
     }
 
-    printf("UHCI: Initializing UHCI on bus %d dev %d func %d...\n", bus, dev, func);
-
     // Base I/O Address
     PciBar bar;
     PciGetBar(&bar, bus, dev, func, 4);
@@ -647,7 +647,7 @@ void UhciInit(u32 bus, u32 dev, u32 func, PCIDevHeader *info)
     }
 
     uint ioAddr = bar.u.port;
-
+    printf("UHCI: Initializing UHCI on bus %d dev %d func %d...\n", bus, dev, func);
     // Controller initialization
     UhciController *hc = (UhciController *) malloc(sizeof(UhciController));
     hc->ioAddr = ioAddr;

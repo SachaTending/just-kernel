@@ -233,7 +233,7 @@ void PCI::pci_init()
 				continue;
 				
 			PrintPCIDevHeader(bus, dev, func, &pci_device);
-			UhciInit(bus, dev, func, (PCIDevHeader *)&pci_device);
+			//UhciInit(bus, dev, func, (PCIDevHeader *)&pci_device);
 			
 			if (pci_device.option.headerType & PCI_HEADERTYPE_MULTIFUNC)
 			{

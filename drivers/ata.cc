@@ -5,7 +5,8 @@
 #include <module.h>
 #include <device.h>
 #include "fat16.h"
-
+#include "malloc.h"
+#include "string.h"
 
 #define ATA_PRIMARY_IO 0x1F0
 #define ATA_SECONDARY_IO 0x170
@@ -168,7 +169,7 @@ uint8_t ata_read_one(void *buf, uint32_t lba, device_t *dev)
 		uint16_t data = inportw(io + ATA_REG_DATA);
 		*(uint16_t *)(buf + i * 2) = data;
 	}
-	ide_400ns_delay(io);
+	//ide_400ns_delay(io);
 	return 1;
 }
 
@@ -182,10 +183,19 @@ void ata_read(void *buf, uint32_t lba, uint32_t numsects, device_t *dev)
 	}
 }
 
+
+char * ata_normal_read_sector(device_t * dev, uint32_t lba) {
+    char * buf = malloc(SECTOR_SIZE);
+	ata_read_one(buf, lba, dev);
+    return buf;
+
+}
+
 void ext2_scan_dev(device_t *dev);
 
 void ata_is_sus()
 {
+	printf("ATA: scanning ata bus...\n");
 	ide_identify(0, 0);
 	ata_pm = 1;
 	device_t *dev;
@@ -204,12 +214,14 @@ void ata_is_sus()
 	dev->priv = priv;
 	dev->read = ata_read;
 	printf("ATA: bus 0 drive 0 name %s\n", dev->name);
-	u8 *img = FatAllocImage(512 * 2);
-	ata_read_one(img, 0, dev);
-	uint seccount = FatGetTotalSectorCount(img);
-	printf("ATA: FS: FAT16 Sector count: %d\n", seccount);
-	img = FatAllocImage(seccount);
-	ata_read(img, 0, seccount, dev);
-	DirEntry *rootdir = FatGetRootDirectory(img);
-	printf("ATA: Root dir name: %s\n", rootdir->name);
+	char *buf = ata_normal_read_sector(dev, 0);
+	printf(buf);
+	//u8 *img = FatAllocImage(512 * 2);
+	//ata_read_one(img, 0, dev);
+	//uint seccount = FatGetTotalSectorCount(img);
+	//printf("ATA: FS: FAT16 Sector count: %d\n", seccount);
+	//img = FatAllocImage(seccount);
+	//ata_read(img, 0, seccount, dev);
+	//DirEntry *rootdir = FatGetRootDirectory(img);
+	//printf("ATA: Root dir name: %s\n", rootdir->name);
 }
