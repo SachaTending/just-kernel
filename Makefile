@@ -1,4 +1,4 @@
-CFLAGS = -I include -m32 -march=i386 -c -I include -fpermissive -g
+CFLAGS = -I include -m32 -march=i386 -c -I include -fpermissive -g -Wall
 LDFLAGS = -A i386 -melf_i386 -T link.ld -Map=kernmap.map
 AS=NASM
 ASFLAGS=-felf32 -g

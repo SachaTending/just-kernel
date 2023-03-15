@@ -341,19 +341,100 @@ void set_text_mode(int hi_res)
 static unsigned g_wd, g_ht;
 
 
+#define R_COM  0x63 // "common" bits
+#define R_W320 0x00
+
+typedef char byte;
+typedef unsigned char u8;
+typedef unsigned short int u16;
+typedef unsigned int u32;
+typedef unsigned short word;
+typedef unsigned long dword;
+
+#define SZ(x) (sizeof(x)/sizeof(x[0]))
+
+static inline
+void io_out16(u16 port, u16 data)
+{
+  asm volatile("outw %0, %1"
+               : : "a"(data), "Nd"(port) );
+}
+
+static inline unsigned char hor_regs [] = {0x0,  0x1,  0x2,  0x3,  0x4, 
+0x5,  0x13};
+
+static inline unsigned char ver_regs  [] = { 0x6,  0x7,  0x9,  0x10, 0x11,
+0x12, 0x15, 0x16};
+
+static inline unsigned char width_320[] = {0x5f, 0x4f, 0x50, 0x82, 0x54,
+0x80, 0x28};
+static inline unsigned char height_200[] = {0xbf, 0x1f, 0x41, 0x9c, 0x8e,
+0x8f, 0x96, 0xb9};
+
+void switch_mode() {
+	byte val = R_COM+R_W320;
+	const byte *w,*h;
+	int a;
+	u8 chain4=1;
+	u8 width=320;
+   	u8 height=200;
+	w = width_320;h=height_200;
+	outportb(0x3c2,val);  // miscellaneous output register
+	io_out16(0x3d4,0x0e11); // enable regs 0-7, crt controller registers
+	for(a=0;a<SZ(hor_regs);++a) 
+		io_out16(0x3d4,(word)((w[a]<<8)+hor_regs[a]));
+	for(a=0;a<SZ(ver_regs);++a)
+		io_out16(0x3d4,(word)((h[a]<<8)+ver_regs[a]));
+
+	io_out16(0x3d4,0x0008); // vert.panning = 0
+
+	if(chain4) {
+		io_out16(0x3d4,0x4014);
+		io_out16(0x3d4,0xa317);
+		io_out16(0x3c4,0x0e04);
+	} else {
+		io_out16(0x3d4,0x0014);
+		io_out16(0x3d4,0xe317);
+		io_out16(0x3c4,0x0604);
+	}
+
+	io_out16(0x3c4,0x0101);
+	io_out16(0x3c4,0x0f02); // enable writing to all planes
+	io_out16(0x3ce,0x4005); // 256color mode
+	io_out16(0x3ce,0x0506); // graph mode & A000-AFFF
+
+	inb(0x3da);
+	outportb(0x3c0,0x30); outportb(0x3c0,0x41);
+	outportb(0x3c0,0x33); outportb(0x3c0,0x00);
+
+	for(a=0;a<16;a++) {    // ega pal
+		outportb(0x3c0,(byte)a); 
+		outportb(0x3c0,(byte)a); 
+	} 
+	
+	outportb(0x3c0, 0x20); // enable video
+}
 
 void write_pixel8x(unsigned x, unsigned y, unsigned c)
 {
-    /*
+    
 	unsigned wd_in_bytes;
 	unsigned off;
 
-	wd_in_bytes = g_wd / 4;
-	off = wd_in_bytes * y + x / 4;
+	//wd_in_bytes = g_wd / 4;
+	//off = wd_in_bytes * y + x / 4;
+	//off = 0xA0000;
+	//off += y*320;
+	//off += 4 * 320 + x;
+	//off += x*200;
     //off =get_fb_seg();
-	set_plane(x & 3);
-	vpokeb(off, c);
-    */
+	//set_plane(x & 3);
+	//vpokeb(off, c);
+	//printf(" OFF: 0x%x", off);
+	//unsigned char *location = (unsigned char *)off;
+	//*location = c;
+	//unsigned char *pixel = vram + y*pitch + x*pixelwidth;
+    
 
     unsigned char* location = (unsigned char*)0xA0000 + 320 * x + y;
     *location = c;

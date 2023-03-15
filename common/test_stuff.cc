@@ -164,7 +164,7 @@ unsigned char *font;
 MODULE_START_CALL void font_init()
 {
       font = (unsigned char *)malloc(sizeof(g_8x8_font));
-      printf("setting font for graphics...");
+      printf("setting font for graphics...\n");
       memcpy((void *)font, (const void *)g_8x8_font, sizeof(g_8x8_font));
 }
 
@@ -175,10 +175,10 @@ void drawchar(unsigned char c, int x, int y, int fgcolor, int bgcolor)
 	int mask[8]={1,2,4,8,16,32,64,128};
 	unsigned char *glyph=font+(int)c*8;
  
-	for(cy=0;cy<16;cy++){
+	for(cy=0;cy<8;cy++){
 		for(cx=0;cx<8;cx++){
-			// write_pixel8x(x+cx,y+cy-12,glyph[cy]&mask[cx]?fgcolor:bgcolor);
-                  write_pixel8x(x+cx,y+cy-12,50);
+			write_pixel8x(x+cx,y+cy-12,glyph[cy]&mask[cx]?fgcolor:bgcolor);
+                  //write_pixel8x(x+cx,y+cy-12,fgcolor);
 		}
 	}
 }

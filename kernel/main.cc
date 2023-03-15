@@ -328,13 +328,12 @@ void play_simple_sound(multiboot_info_t *mbi);
 
 extern "C" void trigger_gp(void);
 
-static void fillrect(unsigned char *vram, unsigned char r, unsigned char g, unsigned   char b, unsigned char w, unsigned char h) {
-    unsigned char *where = vram;
+static void fillrect(int w, int h, int c) {
     int i, j;
  
     for (i = 0; i < w; i++) {
         for (j = 0; j < h; j++) {
-            g_write_pixel(j, i, r);
+            g_write_pixel(j, i, c);
         }
     }
 }
@@ -362,7 +361,7 @@ extern "C" void ap_trampoline(void);
 void PitInit();
 
 void AcpiInit();
-
+void switch_mode();
 extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
     //write_regs(g_80x50_text);
@@ -401,7 +400,7 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
 	printf("%d decimal\n", 123);
 	printf("%x hex\n", 0xABC);
     write_regs(g_320x200x256_modex);
-    uint32_t * frmabebuffer=(uint32_t *)get_fb_seg();
+    uint32_t *frmabebuffer=(uint32_t *)get_fb_seg();
     write_regs(g_80x50_text);
     printf("Frmabebuffer at 0x%x\n", frmabebuffer);
     /*
@@ -414,8 +413,24 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
     */
     
     //fillrect(0xA0000, 5, 4, 4, 4 ,4);
-    //memset(0xA0000, 0, 320*200);
     //write_regs(g_320x200x256_modex);
+    switch_mode();
+    memset((void *)0xA0000, 0, 320*200);
+    int x,y,x_offest;
+    #define max 200
+    for (x = 0; x < max;x++) {
+        break;
+        for (y = 0;y < max;y++) {
+            //unsigned char* location = (unsigned char*)0xA0000 + 320 * 1 * x + y;
+            //*location = 50;
+            g_write_pixel(x, y, x);
+            printf("\rX: %d Y: %d", x, y);
+        }
+    }
+    //fillrect(320, 200, 1);
+    //g_write_pixel(1, 1, 2);
+    //drawchar('c', 50, 50, 10, 0);
+    printf("\n");
 	//g_write_pixel = write_pixel8x;
 	//draw_x();
     //play_simple_sound(mbi);
