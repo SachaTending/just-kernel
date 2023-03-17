@@ -34,4 +34,4 @@ clean:
 	@-rm $(FILES)
 
 run: build
-	@qemu-system-$(ARCH) -kernel $(KERNEL) -rtc base=localtime -device sb16,audiodev=a -audiodev sdl,id=a -serial stdio -smp cores=2 -device piix3-usb-uhci,id=usb-bus0 -device usb-audio -device usb-kbd -hda test-split.cc
+	@qemu-system-$(ARCH) -kernel $(KERNEL) -rtc base=localtime -device sb16,audiodev=a -audiodev sdl,id=a -serial stdio -smp cores=2 -device piix3-usb-uhci,id=usb-bus0 -device usb-audio -device usb-kbd -hda ext2.img -initrd a.tar

@@ -79,7 +79,7 @@ void ide_400ns_delay(uint16_t io)
 		inportb(io + ATA_REG_ALTSTATUS);
 }
 
-void ide_poll(uint16_t io)
+int ide_poll(uint16_t io)
 {
 	
 	for(int i=0; i< 4; i++)
@@ -94,6 +94,7 @@ retry2:	status = inportb(io + ATA_REG_STATUS);
 	if(status & ATA_SR_ERR)
 	{
 		//printf("ATA: ERR set, device failure!\n");
+		return 0x128;
 	}
 	//printf("testing for DRQ\n");
 	if(!(status & ATA_SR_DRQ)) goto retry2;
@@ -162,7 +163,9 @@ uint8_t ata_read_one(void *buf, uint32_t lba, device_t *dev)
 	outportb(io + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
 	//mprint("issued 0x%x to 0x%x\n", ATA_CMD_READ_PIO, io + ATA_REG_COMMAND);
 
-	ide_poll(io);
+	if(ide_poll(io) == 0x128) {
+		return 0x128;
+	}
 
 	for(int i = 0; i < 256; i++)
 	{
@@ -173,14 +176,17 @@ uint8_t ata_read_one(void *buf, uint32_t lba, device_t *dev)
 	return 1;
 }
 
-void ata_read(void *buf, uint32_t lba, uint32_t numsects, device_t *dev)
+int ata_read(void *buf, uint32_t lba, uint32_t numsects, device_t *dev)
 {
 	printf("ATA: reading to 0x%x lba %d numsects %d\n", (unsigned)&buf, lba, numsects);
 	for(int i = 0; i < numsects; i++)
 	{
-		ata_read_one(buf, lba + i, dev);
+		if(ata_read_one(buf, lba + i, dev) == 0x128) {
+			return ATA_FAILURE;
+		}
 		// buf += 512;
 	}
+	return 0;
 }
 
 
@@ -190,8 +196,6 @@ char * ata_normal_read_sector(device_t * dev, uint32_t lba) {
     return buf;
 
 }
-
-void ext2_scan_dev(device_t *dev);
 
 void ata_is_sus()
 {
@@ -213,9 +217,6 @@ void ata_is_sus()
 	priv->drive = (ATA_PRIMARY << 1) | ATA_MASTER;
 	dev->priv = priv;
 	dev->read = ata_read;
-	printf("ATA: bus 0 drive 0 name %s\n", dev->name);
-	char *buf = ata_normal_read_sector(dev, 0);
-	printf(buf);
 	//u8 *img = FatAllocImage(512 * 2);
 	//ata_read_one(img, 0, dev);
 	//uint seccount = FatGetTotalSectorCount(img);

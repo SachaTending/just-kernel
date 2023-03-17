@@ -1,0 +1,1 @@
+FILES += loader/elf.o

@@ -236,18 +236,6 @@ extern "C" void fault_handler(struct regs *r)
     {
         terminal_writestring(exception_messages[r->int_no]);
         terminal_writestring(" Exception.\n");
-        if (r->int_no==3)
-        {
-            //printf("амогус\n");
-            return;
-        }
-        if (r->int_no==13)
-        {
-            printf("Caused by instrcuction at 0x%x\n", r->eip);
-            //r->eip = 0;
-            printf("0x%x\n", (char *)r->eip);
-            return;
-        }
         printf("System Halted!\n");
         __asm__ volatile("cli");
         for (;;);

@@ -9,6 +9,11 @@ void outportl(uint16_t portid, uint32_t value)
 	asm volatile("outl %%eax, %%dx": :"d" (portid), "a" (value));
 }
 
+void outportw(uint16_t portid, uint16_t value)
+{
+	asm volatile("outw %%ax, %%dx": :"d" (portid), "a" (value));
+}
+
 uint32_t inportl(uint16_t portid)
 {
 	uint32_t ret;
@@ -28,4 +33,15 @@ uint16_t inw(uint16_t port)
 	uint16_t ret;
 	asm volatile("inw %%dx, %%ax":"=a"(ret):"d"(port));
 	return ret;
+}
+
+
+unsigned short inports(unsigned short _port) {
+	unsigned short rv;
+	asm volatile ("inw %1, %0" : "=a" (rv) : "dN" (_port));
+	return rv;
+}
+
+void outports(unsigned short _port, unsigned short _data) {
+	asm volatile ("outw %1, %0" : : "dN" (_port), "a" (_data));
 }

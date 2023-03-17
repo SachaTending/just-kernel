@@ -415,7 +415,20 @@ void switch_mode() {
 	outportb(0x3c0, 0x20); // enable video
 }
 
-void write_pixel8x(unsigned x, unsigned y, unsigned c)
+uintptr_t lfb_get_address();
+
+unsigned pixelwidth=640,pitch=1;
+
+static void putpixel(unsigned char *screen, u8 x, u8 y, int color);
+
+static void putpixel_2(unsigned char* screen, int x,int y, int color) {
+    unsigned where = x*pixelwidth + y;
+    screen[where] = color & 255;              // BLUE
+    screen[where + 1] = (color >> 8) & 255;   // GREEN
+    screen[where + 2] = (color >> 16) & 255;  // RED
+}
+
+void write_pixel8x(unsigned x, unsigned y, int c)
 {
     
 	unsigned wd_in_bytes;
@@ -435,10 +448,11 @@ void write_pixel8x(unsigned x, unsigned y, unsigned c)
 	//*location = c;
 	//unsigned char *pixel = vram + y*pitch + x*pixelwidth;
     
-
-    unsigned char* location = (unsigned char*)0xA0000 + 320 * x + y;
+    unsigned char* location = (unsigned char*)0xA0000 + 640 * x + y;
+	//set_plane(x & 3);
     *location = c;
-
+	//printf("X: %d Y: %d C: %d\n", x, y ,c);
+	//putpixel((unsigned char *)0xA0000, x,y,c);
 }
 
 //g_write_pixel = write_pixel8;

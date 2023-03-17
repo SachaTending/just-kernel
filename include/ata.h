@@ -83,10 +83,13 @@
 #define      ATA_READ      0x00
 #define      ATA_WRITE     0x013
 
+// For return
+#define ATA_FAILURE 128
+
 typedef struct {
 	uint8_t drive;
 } ide_private_data;
 
-void ata_read(void *buf, uint32_t lba, uint32_t numsects, device_t *dev);
+int ata_read(void *buf, uint32_t lba, uint32_t numsects, device_t *dev);
 
 #endif

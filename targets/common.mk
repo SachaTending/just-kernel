@@ -1,1 +1,1 @@
-FILES += common/mmio.o common/tasking.o
+FILES += common/mmio.o common/tasking.o common/paging.o common/paging_helper.o common/tga.o

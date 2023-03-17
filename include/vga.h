@@ -1,7 +1,7 @@
 #include <vga_font.h>
 
 #ifndef write_pixel8x
-void write_pixel8x(unsigned x, unsigned y, unsigned c);
+void write_pixel8x(unsigned x, unsigned y, int c);
 #endif
 
 #ifndef g_write_pixel

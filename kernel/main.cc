@@ -10,6 +10,7 @@
 #include <vga.h>
 #include "pci.h"
 #include "tasking.h"
+#include "tga.h"
 
 void log(const char *logd);
 
@@ -170,14 +171,21 @@ void mouse(struct regs * r)
 			old_mouse_y = mouse_y;
             mouse_x = mouse_x + (mouse_byte[1]);
             mouse_y = mouse_y - (mouse_byte[2]);
-			if(mouse_x < 0)
-                mouse_x = 0;
-            if(mouse_y < 0)
-                mouse_y = 0;
-			if(mouse_x > 80 - 1)
-                mouse_x = 80 - 1;
-            if(mouse_y > 25 - 1)
-                mouse_y = 25 - 1;
+            if (get_fb_seg() == 0xA000) {
+                if (mouse_x < 0) mouse_x = 0;
+                if (mouse_y < 0) mouse_y = 0;
+                if (mouse_x > 320) mouse_x = 0;
+                if (mouse_y > 200) mouse_y = 0;
+            } else {
+                if(mouse_x < 0)
+                    mouse_x = 0;
+                if(mouse_y < 0)
+                    mouse_y = 0;
+                if(mouse_x > 80 - 1)
+                    mouse_x = 80 - 1;
+                if(mouse_y > 25 - 1)
+                    mouse_y = 25 - 1;
+            }
 			mouse_cycle = 0;
             char cursor = '@';
 			char cursor_lol = '=';
@@ -191,6 +199,8 @@ void mouse(struct regs * r)
             mouse_print(old_old_mouse_x, old_old_mouse_y, vga_entry_color(VGA_COLOR_BLACK, VGA_COLOR_BLACK), cursor_lol);
 			mouse_print(old_mouse_x, old_mouse_y, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), cursor_lol);
 			mouse_print(mouse_x, mouse_y, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK), cursor);
+            g_write_pixel(old_mouse_y, old_mouse_x, 0);
+            g_write_pixel(mouse_y, mouse_x, 50);
             //terminal_putentryat(cursor, mouse_x, mouse_y, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK));
 			break;
 		
@@ -362,6 +372,19 @@ void PitInit();
 
 void AcpiInit();
 void switch_mode();
+
+void draw_icon(int x, int y, int w, int h, unsigned int *pixels) {
+    int l,j,i;
+    for (l = j = 0; l < h; l++) {
+        for (i = 0; i < w; i++, j++) {
+            g_write_pixel(x + i, y + l, pixels[j]);
+        }
+    }
+}
+
+void ustar_list(char *buf);
+void paging_init();
+void bochs_setup();
 extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
     //write_regs(g_80x50_text);
@@ -378,7 +401,20 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
 	log("kernel location:");printf("0x%x kernel end: 0x%x kernel size: %d\n", (unsigned)&_kernel_start, (unsigned)&_kernel_end, (unsigned)&_kernel_end - (unsigned)&_kernel_start);
 	log("Hello from ");print_russia();terminal_writestring("!\n");
 	log("Note: Sometimes, system triggers excepton, dont worry, and reboot\nbug catched on qemu\n");
-    mm_init((unsigned)&_kernel_end);
+    log("Calculating address for start of allocator...\n");
+    multiboot_module_t *mod_a;
+    int modnum;
+    unsigned addr=(unsigned)&_kernel_end;
+    printf("base: 0x%x\n", addr);
+    for (modnum = 0, mod_a = (multiboot_module_t *) mbi->mods_addr;
+            modnum < mbi->mods_count;
+            modnum++, mod_a++) {
+            if (addr < mod_a->mod_end + 128) {
+                addr = (unsigned)mod_a->mod_end + 128;
+            }
+            printf("base: 0x%x\n", addr);
+    }    
+    mm_init(addr);
     pci.pci_proc_dump();
 	// terminal_writestring("Builded on host: ");terminal_writestring(_HOST_USER);terminal_writestring("@");terminal_writestring(_HOST_NAME);terminal_writestring("\n");
     //payload();
@@ -396,6 +432,7 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
 	asm volatile("hlt");
     AcpiInit();
     pci.pci_init();
+    paging_init();
 	log("Testing printf...\n");
 	printf("%d decimal\n", 123);
 	printf("%x hex\n", 0xABC);
@@ -414,7 +451,9 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
     
     //fillrect(0xA0000, 5, 4, 4, 4 ,4);
     //write_regs(g_320x200x256_modex);
-    switch_mode();
+    //switch_mode();
+    /*
+    bochs_setup();
     memset((void *)0xA0000, 0, 320*200);
     int x,y,x_offest;
     #define max 200
@@ -427,18 +466,31 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
             printf("\rX: %d Y: %d", x, y);
         }
     }
+    extern char _binary_img_tga_start;
+    extern char _binary_img_tga_end;
+    printf("img.tga start: 0x%x\n", &_binary_img_tga_start);
+    unsigned int *out = tga_parse((unsigned char *)&_binary_img_tga_start, &_binary_img_tga_end-&_binary_img_tga_start); 
+    draw_icon(1,1,out[0],out[1],out);*/
     //fillrect(320, 200, 1);
     //g_write_pixel(1, 1, 2);
     //drawchar('c', 50, 50, 10, 0);
-    printf("\n");
+    multiboot_module_t *mod;
+    int i;
+      
+    printf ("mods_count = %d, mods_addr = 0x%x\n",
+        (int) mbi->mods_count, (int) mbi->mods_addr);
+    for (i = 0, mod = (multiboot_module_t *) mbi->mods_addr;
+            i < mbi->mods_count;
+            i++, mod++) {
+        printf (" mod_start = 0x%x, mod_end = 0x%x, cmdline = %s\n",
+                (unsigned) mod->mod_start,
+                (unsigned) mod->mod_end,
+                (char *) mod->cmdline);
+        ustar_list((char *)mod->mod_start);
+    }    
 	//g_write_pixel = write_pixel8x;
 	//draw_x();
     //play_simple_sound(mbi);
-    ata_is_sus();
-    log("Testing C++ features...\n");
-    abc Abc;
-    Abc.sus();
-    log("System switched to idle task");
     //ata_is_sus();
     //trigger_gp();
 	// for (;;) {asm volatile("hlt");}

@@ -120,6 +120,8 @@ extern "C" void ap_startup(int apicid)
     while(1);
 }
 
+void madt_print(uint8_t *addr);
+
 extern "C" void payload();
 
 extern "C" uint8_t bspdone = 0;
@@ -136,7 +138,6 @@ static void AcpiParseApic(AcpiMadt *madt)
     //printf("ACPI: ACPI Disabled.");
     //return;
     s_madt = madt;
-
     printf("ACPI: Local APIC Address = 0x%x\n", madt->localApicAddr);
     g_localApicAddr = (u8 *)(uintptr_t)madt->localApicAddr;
     LocalApicInit();
@@ -234,6 +235,7 @@ static void AcpiParseApic(AcpiMadt *madt)
 }
 
 
+uint8_t *p = (uint8_t *)0x000e0000;
 
 static void AcpiParseDT(AcpiHeader *header)
 {
@@ -250,7 +252,7 @@ static void AcpiParseDT(AcpiHeader *header)
     }
     else if (signature == 0x43495041)
     {
-        AcpiParseApic((AcpiMadt *)header);
+        //AcpiParseApic((AcpiMadt *)header);
     }
 }
 
@@ -341,7 +343,7 @@ void AcpiInit() // From https://github.com/pdoane/osdev/blob/master/acpi/acpi.c
     // TODO - Search Extended BIOS Area
 
     // Search main BIOS area below 1MB
-    uint8_t *p = (uint8_t *)0x000e0000;
+    //uint8_t *p = (uint8_t *)0x000e0000;
     uint8_t *end = (uint8_t *)0x000fffff;
 
     while (p < end)

@@ -1,1 +1,1 @@
-FILES += memory/malloc.o
+FILES += memory/malloc.o memory/paging.o

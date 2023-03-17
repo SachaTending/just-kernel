@@ -1,1 +1,1 @@
-FILES += fs/ext2.o fs/fat16.o
+FILES += fs/ext2.o fs/fat16.o fs/ustar.o
