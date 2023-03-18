@@ -209,9 +209,12 @@ void mouse(struct regs * r)
 
 u32 g_pitTicks;
 
+void schedule();
+
 void timer_call(struct regs *r)
 {
     g_pitTicks++;
+    schedule();
 }
 
 static inline uint64_t rdtsc()
@@ -373,6 +376,8 @@ void PitInit();
 void AcpiInit();
 void switch_mode();
 
+#include "math.h"
+
 void draw_icon(int x, int y, int w, int h, unsigned int *pixels) {
     int l,j,i;
     for (l = j = 0; l < h; l++) {
@@ -385,6 +390,7 @@ void draw_icon(int x, int y, int w, int h, unsigned int *pixels) {
 void ustar_list(char *buf);
 void paging_init();
 void bochs_setup();
+void setup_tasking();
 extern "C" void kernel_main(multiboot_info_t *mbi) 
 {
     //write_regs(g_80x50_text);
@@ -494,5 +500,6 @@ extern "C" void kernel_main(multiboot_info_t *mbi)
     //ata_is_sus();
     //trigger_gp();
 	// for (;;) {asm volatile("hlt");}
+    //setup_tasking();
     kernel_idle_task();
 }

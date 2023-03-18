@@ -4,6 +4,7 @@
 #include <port_io.h>
 #include <string.h>
 #include <printf.h>
+#include "tasking.h"
 
 struct idt_entry idt[256];
 struct idt_ptr idtp;
@@ -236,9 +237,31 @@ extern "C" void fault_handler(struct regs *r)
     {
         terminal_writestring(exception_messages[r->int_no]);
         terminal_writestring(" Exception.\n");
-        printf("System Halted!\n");
-        __asm__ volatile("cli");
-        for (;;);
+        if (r->int_no == 14) {
+            uint32_t faulting_address;
+            asm volatile("mov %%cr2, %0" : "=r" (faulting_address));
+            
+            // The error code gives us details of what happened.
+            int present   = !(r->err_code & 0x1); // Page not present
+            int rw = r->err_code & 0x2;           // Write operation?
+            int us = r->err_code & 0x4;           // Processor was in user-mode?
+            int reserved = r->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
+            int id = r->err_code & 0x10;          // Caused by an instruction fetch?
+            printf("Reason: ");
+            if (present) printf("page not present.\n");
+            if (rw) printf("page write protected.\n");
+            if (us) printf("CPU in user mode.\n");
+            if (reserved) printf("overwrited cpu reserved bits.\n");
+            if (id) printf("instruction fetch error.\n");
+        } else if (r->int_no == 13){
+            printf("Notifying process %s (%d) with SIGTERM\n", p_name(), p_pid());
+		    send_sig(SIG_TERM);
+            return;
+        } else {
+            printf("System Halted!\n");
+            __asm__ volatile("cli");
+            for (;;);
+        }
     }
 }
 

@@ -6,7 +6,7 @@ KERNEL=kernel.bin
 ARCH=i386
 
 FILES = kernel/boot.o kernel/main.o kernel/constructor_test.o \
-	kernel/ap_trampoline.o \
+	kernel/ap_trampoline.o kernel/tasking.o \
 	common/tty.o common/string.o common/port_io.o common/printf.o \
 	common/math.o common/test_stuff.o
 
@@ -34,4 +34,4 @@ clean:
 	@-rm $(FILES)
 
 run: build
-	@qemu-system-$(ARCH) -kernel $(KERNEL) -rtc base=localtime -device sb16,audiodev=a -audiodev sdl,id=a -serial stdio -smp cores=2 -device piix3-usb-uhci,id=usb-bus0 -device usb-audio -device usb-kbd -hda ext2.img -initrd a.tar
+	@qemu-system-$(ARCH) -kernel $(KERNEL) -rtc base=localtime -device sb16,audiodev=a -audiodev sdl,id=a -serial stdio -smp cores=2 -device piix3-usb-uhci,id=usb-bus0 -device usb-audio -hda ext2.img -initrd a.tar

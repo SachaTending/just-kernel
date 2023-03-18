@@ -1,7 +1,4 @@
-typedef double f64;
-
-#define E 2.71828
-#define PI 3.14159265358979323846264338327950
+#include "math.h"
 
 f64 fabs(f64 x) {
     return x < 0.0 ? -x : x;
@@ -25,4 +22,14 @@ f64 sin(f64 x) {
 
 f64 cos(f64 x) {
     return sin(x + PI / 2.0);
+}
+
+long map(long x, long in_min, long in_max, long out_min, long out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+unsigned long map(unsigned long x, unsigned long in_min, unsigned long in_max, unsigned long out_min, unsigned long out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
